@@ -64,6 +64,36 @@ export function apiDelete(path, { signal } = {}) {
   });
 }
 
+export function apiPut(path, body, { signal } = {}) {
+  return request(path, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+    signal
+  });
+}
+
+export async function apiUpload(path, formData, { signal } = {}) {
+  const url = BASE_URL ? buildUrl(path) : path;
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+    signal
+  });
+
+  if (!response.ok) {
+    const error = new Error(`Request failed with status ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
 export async function withFallback(fetcher, fallbackValue) {
   try {
     return await fetcher();

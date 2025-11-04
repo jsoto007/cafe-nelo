@@ -1,11 +1,15 @@
+import json
 import secrets
-from datetime import datetime
+from datetime import date, datetime
 from functools import wraps
+from pathlib import Path
+from uuid import uuid4
 
-from flask import Blueprint, jsonify, request, session, g
+from flask import Blueprint, current_app, g, jsonify, request, send_from_directory, session
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
+from werkzeug.utils import secure_filename
 
 from .config import db
 from .models import (
@@ -23,6 +27,28 @@ from .models import (
 )
 
 api_bp = Blueprint("api", __name__)
+
+WEEK_DAYS = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
+
+DEFAULT_OPERATING_HOURS = [
+    {"day": "monday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
+    {"day": "tuesday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
+    {"day": "wednesday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
+    {"day": "thursday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
+    {"day": "friday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
+    {"day": "saturday", "is_open": True, "open_time": "10:00", "close_time": "16:00"},
+    {"day": "sunday", "is_open": False, "open_time": "10:00", "close_time": "14:00"},
+]
+
+ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
 
 
 def parse_bool(value, default=False):
@@ -241,6 +267,52 @@ def log_admin_activity(admin: AdminAccount, action: str, details: str | None = N
     db.session.add(log)
 
 
+def allowed_file(filename: str) -> bool:
+    if not filename or "." not in filename:
+        return False
+    return filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+
+def load_json_setting(key: str, default):
+    setting = SystemSetting.query.filter_by(key=key).first()
+    if not setting or setting.value is None:
+        return default
+    try:
+        return json.loads(setting.value)
+    except (TypeError, json.JSONDecodeError):
+        return default
+
+
+def upsert_json_setting(key: str, value, *, description: str | None = None) -> SystemSetting:
+    setting = SystemSetting.query.filter_by(key=key).first()
+    if not setting:
+        setting = SystemSetting(key=key, description=description, value=json.dumps(value))
+        db.session.add(setting)
+    else:
+        setting.value = json.dumps(value)
+        if description and description != setting.description and not setting.description:
+            setting.description = description
+    return setting
+
+
+def parse_iso_datetime(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        if value.endswith("Z"):
+            try:
+                return datetime.fromisoformat(f"{value[:-1]}+00:00")
+            except ValueError:
+                return None
+        return None
+
+
 @api_bp.route("/api/gallery/categories", methods=["GET"])
 def list_gallery_categories():
     include_inactive = parse_bool(request.args.get("include_inactive"), default=False)
@@ -452,6 +524,55 @@ def auth_logout():
     return jsonify({"status": "logged_out"})
 
 
+@api_bp.route("/api/uploads/<path:filename>", methods=["GET"])
+def serve_uploaded_file(filename):
+    upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
+    file_path = upload_dir / filename
+    if not file_path.exists() or not file_path.is_file():
+        return jsonify({"error": "File not found."}), 404
+    return send_from_directory(upload_dir, filename, as_attachment=False)
+
+
+@api_bp.route("/api/admin/uploads", methods=["POST"])
+@admin_required
+def admin_upload_media():
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided."}), 400
+
+    file = request.files["file"]
+    if not file or file.filename == "":
+        return jsonify({"error": "Empty file."}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Unsupported file type."}), 400
+
+    extension = file.filename.rsplit(".", 1)[1].lower()
+    unique_name = f"{uuid4().hex}.{extension}"
+    safe_name = secure_filename(unique_name)
+
+    upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    destination = upload_dir / safe_name
+
+    file.save(destination)
+
+    admin: AdminAccount = g.current_admin
+    try:
+        log_admin_activity(
+            admin,
+            "upload_create",
+            details=f"Uploaded media {safe_name}",
+            ip_address=request.remote_addr,
+        )
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        destination.unlink(missing_ok=True)
+        return jsonify({"error": "Unable to store upload."}), 500
+
+    return jsonify({"filename": safe_name, "url": f"/api/uploads/{safe_name}"}), 201
+
+
 @api_bp.route("/api/admin/session", methods=["GET"])
 @admin_required
 def admin_session():
@@ -567,6 +688,105 @@ def admin_dashboard():
             "system_settings": [serialize_setting(setting) for setting in settings],
         }
     )
+
+
+@api_bp.route("/api/admin/schedule", methods=["GET"])
+@admin_required
+def admin_get_schedule():
+    operating_hours = load_json_setting("studio_operating_hours", DEFAULT_OPERATING_HOURS)
+    days_off = load_json_setting("studio_days_off", [])
+    return jsonify({"operating_hours": operating_hours, "days_off": days_off})
+
+
+@api_bp.route("/api/admin/schedule", methods=["PUT"])
+@admin_required
+def admin_update_schedule():
+    payload = request.get_json(silent=True) or {}
+    operating_hours = payload.get("operating_hours")
+    days_off = payload.get("days_off")
+
+    if not isinstance(operating_hours, list):
+        return jsonify({"error": "operating_hours must be a list."}), 400
+    if not isinstance(days_off, list):
+        return jsonify({"error": "days_off must be a list."}), 400
+
+    normalised_hours = []
+    seen_days = set()
+    for entry in operating_hours:
+        if not isinstance(entry, dict):
+            return jsonify({"error": "Each operating hour entry must be an object."}), 400
+        day = entry.get("day")
+        if day not in WEEK_DAYS:
+            return jsonify({"error": f"Invalid day provided: {day}."}), 400
+        if day in seen_days:
+            return jsonify({"error": f"Duplicate day provided: {day}."}), 400
+        seen_days.add(day)
+        is_open = bool(entry.get("is_open"))
+        open_time = (entry.get("open_time") or "").strip() or "10:00"
+        close_time = (entry.get("close_time") or "").strip() or "18:00"
+        for label, value in (("open_time", open_time), ("close_time", close_time)):
+            if len(value) != 5 or value[2] != ":":
+                return jsonify({"error": f"{label} must use HH:MM 24h format."}), 400
+            try:
+                hours, minutes = value.split(":")
+                hour_i, minute_i = int(hours), int(minutes)
+            except (TypeError, ValueError):
+                return jsonify({"error": f"{label} must use HH:MM 24h format."}), 400
+            if not (0 <= hour_i < 24 and 0 <= minute_i < 60):
+                return jsonify({"error": f"{label} must be a valid time."}), 400
+        if is_open and open_time >= close_time:
+            return jsonify({"error": f"close_time must be after open_time for {day}."}), 400
+        normalised_hours.append(
+            {
+                "day": day,
+                "is_open": is_open,
+                "open_time": open_time,
+                "close_time": close_time,
+            }
+        )
+
+    normalised_days_off = []
+    seen_dates = set()
+    for value in days_off:
+        if not isinstance(value, str):
+            return jsonify({"error": "days_off must only include ISO date strings."}), 400
+        value = value.strip()
+        try:
+            parsed = date.fromisoformat(value)
+        except ValueError:
+            return jsonify({"error": f"Invalid day off {value}; use YYYY-MM-DD."}), 400
+        iso_value = parsed.isoformat()
+        if iso_value in seen_dates:
+            continue
+        seen_dates.add(iso_value)
+        normalised_days_off.append(iso_value)
+
+    upsert_json_setting(
+        "studio_operating_hours",
+        normalised_hours,
+        description="Defines weekly opening hours for the studio.",
+    )
+    upsert_json_setting(
+        "studio_days_off",
+        normalised_days_off,
+        description="Dates when the studio does not accept appointments.",
+    )
+
+    admin: AdminAccount = g.current_admin
+
+    try:
+        log_admin_activity(
+            admin,
+            "schedule_update",
+            details=f"Updated schedule with {len(normalised_hours)} day entries and {len(normalised_days_off)} days off.",
+            ip_address=request.remote_addr,
+        )
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Unable to update schedule."}), 500
+
+    return jsonify({"operating_hours": normalised_hours, "days_off": normalised_days_off})
 
 
 @api_bp.route("/api/admin/users", methods=["GET"])
@@ -965,6 +1185,120 @@ def admin_delete_gallery_item(item_id):
     return jsonify({"status": "deleted"})
 
 
+@api_bp.route("/api/admin/appointments", methods=["POST"])
+@admin_required
+def admin_create_appointment():
+    payload = request.get_json(silent=True) or {}
+
+    client_id = payload.get("client_id")
+    guest_name = (payload.get("guest_name") or "").strip()
+    guest_email = (payload.get("guest_email") or "").strip()
+    guest_phone = (payload.get("guest_phone") or "").strip() or None
+    client_description = (payload.get("client_description") or "").strip() or None
+    status = (payload.get("status") or "pending").strip() or "pending"
+
+    scheduled_start_raw = payload.get("scheduled_start")
+    scheduled_start = parse_iso_datetime(scheduled_start_raw)
+    if scheduled_start_raw and not scheduled_start:
+        return jsonify({"error": "Invalid scheduled_start; use ISO 8601."}), 400
+
+    duration_minutes = payload.get("duration_minutes")
+    if duration_minutes is not None:
+        try:
+            duration_minutes = int(duration_minutes)
+        except (TypeError, ValueError):
+            return jsonify({"error": "duration_minutes must be an integer."}), 400
+
+    assigned_admin_id = payload.get("assigned_admin_id")
+    assigned_admin = None
+    if assigned_admin_id is not None:
+        if assigned_admin_id == "":
+            assigned_admin_id = None
+        if assigned_admin_id is not None:
+            assigned_admin = AdminAccount.query.get(assigned_admin_id)
+            if not assigned_admin:
+                return jsonify({"error": "Assigned admin not found."}), 404
+
+    client_account = None
+    if client_id:
+        client_account = ClientAccount.query.get(client_id)
+        if not client_account:
+            return jsonify({"error": "Client not found."}), 404
+
+    if not client_account and not guest_name:
+        return jsonify({"error": "Provide either client_id or guest details."}), 400
+
+    appointment = TattooAppointment(
+        reference_code=generate_reference_code(),
+        client=client_account,
+        guest_name=guest_name or None,
+        guest_email=guest_email or None,
+        guest_phone=guest_phone,
+        client_description=client_description,
+        status=status,
+        scheduled_start=scheduled_start,
+        duration_minutes=duration_minutes,
+        assigned_admin=assigned_admin,
+    )
+
+    db.session.add(appointment)
+
+    admin: AdminAccount = g.current_admin
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Unable to create appointment."}), 500
+
+    appointment = (
+        TattooAppointment.query.options(
+            joinedload(TattooAppointment.client),
+            joinedload(TattooAppointment.assigned_admin),
+            joinedload(TattooAppointment.assets).joinedload(AppointmentAsset.admin_uploader),
+            joinedload(TattooAppointment.assets).joinedload(AppointmentAsset.client_uploader),
+        )
+        .get(appointment.id)
+    )
+
+    try:
+        log_admin_activity(
+            admin,
+            "appointment_create",
+            details=f"Created appointment {appointment.reference_code or appointment.id}",
+            ip_address=request.remote_addr,
+        )
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+
+    return jsonify(serialize_appointment(appointment)), 201
+
+
+@api_bp.route("/api/admin/appointments/<int:appointment_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_appointment(appointment_id):
+    appointment = TattooAppointment.query.get_or_404(appointment_id)
+    reference_code = appointment.reference_code or str(appointment.id)
+
+    db.session.delete(appointment)
+    admin: AdminAccount = g.current_admin
+
+    try:
+        log_admin_activity(
+            admin,
+            "appointment_delete",
+            details=f"Deleted appointment {reference_code}",
+            ip_address=request.remote_addr,
+        )
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Unable to delete appointment."}), 500
+
+    return jsonify({"status": "deleted"})
+
+
 @api_bp.route("/api/appointments", methods=["POST"])
 def create_appointment():
     payload = request.get_json(silent=True) or {}
@@ -1004,13 +1338,10 @@ def create_appointment():
     else:
         client_account = None
 
-    scheduled_start = None
     scheduled_start_raw = payload.get("scheduled_start")
-    if scheduled_start_raw:
-        try:
-            scheduled_start = datetime.fromisoformat(scheduled_start_raw)
-        except (TypeError, ValueError):
-            errors.append({"field": "scheduled_start", "message": "Invalid datetime format (use ISO 8601)."})
+    scheduled_start = parse_iso_datetime(scheduled_start_raw)
+    if scheduled_start_raw and not scheduled_start:
+        errors.append({"field": "scheduled_start", "message": "Invalid datetime format (use ISO 8601)."})
 
     duration_minutes = payload.get("duration_minutes")
     if duration_minutes is not None:
@@ -1181,10 +1512,10 @@ def admin_update_appointment(appointment_id):
     if "scheduled_start" in payload:
         scheduled_start_raw = payload.get("scheduled_start")
         if scheduled_start_raw:
-            try:
-                appointment.scheduled_start = datetime.fromisoformat(scheduled_start_raw)
-            except (TypeError, ValueError):
+            parsed = parse_iso_datetime(scheduled_start_raw)
+            if not parsed:
                 return jsonify({"error": "Invalid datetime format (use ISO 8601)."}), 400
+            appointment.scheduled_start = parsed
         else:
             appointment.scheduled_start = None
 

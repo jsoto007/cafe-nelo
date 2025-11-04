@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import Card from '../components/Card.jsx';
 import SectionTitle from '../components/SectionTitle.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { apiPost } from '../lib/api.js';
 
 const INITIAL_REGISTER = {
@@ -18,8 +19,22 @@ const INITIAL_LOGIN = {
   password: ''
 };
 
+const REGISTER_FIELD_IDS = {
+  firstName: 'register-first-name',
+  lastName: 'register-last-name',
+  email: 'register-email',
+  phone: 'register-phone',
+  password: 'register-password'
+};
+
+const LOGIN_FIELD_IDS = {
+  email: 'login-email',
+  password: 'login-password'
+};
+
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { refreshSession } = useAuth();
   const [registerForm, setRegisterForm] = useState(INITIAL_REGISTER);
   const [loginForm, setLoginForm] = useState(INITIAL_LOGIN);
   const [notice, setNotice] = useState(null);
@@ -60,6 +75,7 @@ export default function AuthPage() {
       setRegisterForm(INITIAL_REGISTER);
       setLoginForm(INITIAL_LOGIN);
       setNotice('Account created successfully – redirecting to your dashboard.');
+      await refreshSession();
       navigate(redirect, { replace: true });
     } catch (err) {
       if (err.status === 400) {
@@ -90,6 +106,7 @@ export default function AuthPage() {
       if (redirect) {
         setLoginForm(INITIAL_LOGIN);
         setNotice('Signed in successfully – redirecting.');
+        await refreshSession();
         navigate(redirect, { replace: true });
         return;
       }
@@ -132,10 +149,14 @@ export default function AuthPage() {
             <form className="space-y-4" onSubmit={handleRegisterSubmit}>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                  <label
+                    htmlFor={REGISTER_FIELD_IDS.firstName}
+                    className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                  >
                     First name
                   </label>
                   <input
+                    id={REGISTER_FIELD_IDS.firstName}
                     type="text"
                     value={registerForm.first_name}
                     onChange={handleRegisterChange('first_name')}
@@ -144,10 +165,14 @@ export default function AuthPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                  <label
+                    htmlFor={REGISTER_FIELD_IDS.lastName}
+                    className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                  >
                     Last name
                   </label>
                   <input
+                    id={REGISTER_FIELD_IDS.lastName}
                     type="text"
                     value={registerForm.last_name}
                     onChange={handleRegisterChange('last_name')}
@@ -157,8 +182,14 @@ export default function AuthPage() {
                 </div>
               </div>
               <div>
-                <label className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Email</label>
+                <label
+                  htmlFor={REGISTER_FIELD_IDS.email}
+                  className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                >
+                  Email
+                </label>
                 <input
+                  id={REGISTER_FIELD_IDS.email}
                   type="email"
                   value={registerForm.email}
                   onChange={handleRegisterChange('email')}
@@ -167,8 +198,14 @@ export default function AuthPage() {
                 />
               </div>
               <div>
-                <label className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Phone</label>
+                <label
+                  htmlFor={REGISTER_FIELD_IDS.phone}
+                  className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                >
+                  Phone
+                </label>
                 <input
+                  id={REGISTER_FIELD_IDS.phone}
                   type="tel"
                   value={registerForm.phone}
                   onChange={handleRegisterChange('phone')}
@@ -176,8 +213,14 @@ export default function AuthPage() {
                 />
               </div>
               <div>
-                <label className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Password</label>
+                <label
+                  htmlFor={REGISTER_FIELD_IDS.password}
+                  className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                >
+                  Password
+                </label>
                 <input
+                  id={REGISTER_FIELD_IDS.password}
                   type="password"
                   value={registerForm.password}
                   onChange={handleRegisterChange('password')}
@@ -197,8 +240,14 @@ export default function AuthPage() {
             </h2>
             <form className="space-y-4" onSubmit={handleLoginSubmit}>
               <div>
-                <label className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Email</label>
+                <label
+                  htmlFor={LOGIN_FIELD_IDS.email}
+                  className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                >
+                  Email
+                </label>
                 <input
+                  id={LOGIN_FIELD_IDS.email}
                   type="email"
                   value={loginForm.email}
                   onChange={handleLoginChange('email')}
@@ -207,8 +256,14 @@ export default function AuthPage() {
                 />
               </div>
               <div>
-                <label className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Password</label>
+                <label
+                  htmlFor={LOGIN_FIELD_IDS.password}
+                  className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                >
+                  Password
+                </label>
                 <input
+                  id={LOGIN_FIELD_IDS.password}
                   type="password"
                   value={loginForm.password}
                   onChange={handleLoginChange('password')}

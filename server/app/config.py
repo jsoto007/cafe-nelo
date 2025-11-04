@@ -76,6 +76,12 @@ def configure_app(app: Flask) -> SQLAlchemy:
 
     engine_options = _engine_defaults(app)
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
+
+    uploads_dir = Path(os.getenv("UPLOAD_FOLDER", Path(__file__).resolve().parent.parent / "uploads"))
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    app.config["UPLOAD_FOLDER"] = str(uploads_dir)
+    app.config.setdefault("MAX_CONTENT_LENGTH", 10 * 1024 * 1024)  # 10 MB upload ceiling
+
     db.init_app(app)
 
     return db

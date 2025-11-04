@@ -47,7 +47,7 @@ export default function Testimonials() {
             <Card key={entry.id} className="h-full space-y-6">
               <div className="space-y-4">
                 <Stars rating={entry.rating} />
-                <p className="text-sm text-gray-600 dark:text-gray-300">"{entry.quote}"</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">&ldquo;{entry.quote}&rdquo;</p>
               </div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">{entry.name}</p>
             </Card>

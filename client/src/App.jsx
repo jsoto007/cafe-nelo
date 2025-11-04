@@ -32,6 +32,7 @@ export default function App() {
     try {
       window.localStorage.setItem(STORAGE_KEY, theme);
     } catch (error) {
+      // Local storage may be unavailable (e.g. private mode); ignore persistence errors.
     }
   }, [theme]);
 
@@ -49,7 +50,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/dashboard/user" element={<UserDashboard />} />
-        <Route path="/dashboard/admin" element={<AdminDashboard />} />
+        <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />
