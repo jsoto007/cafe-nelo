@@ -28,3 +28,8 @@ def create_app():
     app.register_blueprint(api_bp)
 
     return app
+
+
+# Expose a module-level Flask application so Gunicorn can import `app:app`
+# even when the Procfile or hosting platform still references that target.
+app = create_app()
