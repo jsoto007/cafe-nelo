@@ -90,7 +90,7 @@ export default function Gallery() {
             tabs={tabs}
             activeTab={activeSlug}
             onTabChange={handleTabChange}
-            renderPanel={(tabId, { isActive }) => {
+            renderPanel={(tabId) => {
               const panelActive = tabId === activeSlug;
               const panelItems = panelActive ? items : [];
               const showLoader = panelActive && !items.length && isLoading;

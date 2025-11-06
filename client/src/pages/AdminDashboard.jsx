@@ -7,6 +7,7 @@ import AdminCalendar from './admin/AdminCalendar.jsx';
 import AdminGallery from './admin/AdminGallery.jsx';
 import AdminSettings from './admin/AdminSettings.jsx';
 import AppointmentDetails from './admin/AppointmentDetails.jsx';
+import AdminUserDetails from './admin/AdminUserDetails.jsx';
 import { AdminDashboardProvider, useAdminDashboard, getAdminResourcesForPath } from './admin/AdminDashboardContext.jsx';
 
 function AdminDashboardContent() {
@@ -74,6 +75,7 @@ function AdminDashboardContent() {
           <Route path="settings" element={<AdminSettings />} />
           <Route path="calendar" element={<AdminCalendar />} />
           <Route path="calendar/:appointmentId" element={<AppointmentDetails />} />
+          <Route path="user/:userId" element={<AdminUserDetails />} />
           <Route path="gallery" element={<AdminGallery />} />
           <Route path="*" element={<Navigate to="settings" replace />} />
         </Routes>

@@ -39,6 +39,11 @@ export function getAdminResourcesForPath(path) {
   if (path.includes('/dashboard/admin/settings')) {
     resources.add('admins');
     resources.add('categories');
+    resources.add('users');
+  }
+  if (path.includes('/dashboard/admin/user/')) {
+    resources.add('appointments');
+    resources.add('users');
   }
   return Array.from(resources);
 }
@@ -98,6 +103,7 @@ export function AdminDashboardProvider({ children }) {
   const [error, setError] = useState(null);
 
   const [admins, setAdmins] = useState([]);
+  const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [galleryItems, setGalleryItems] = useState([]);
   const [galleryPagination, setGalleryPagination] = useState({
@@ -204,6 +210,13 @@ export function AdminDashboardProvider({ children }) {
     return response;
   }, [markFetched]);
 
+  const refreshUsers = useCallback(async () => {
+    const response = await apiGet('/api/admin/users');
+    setUsers(ensureArray(response));
+    markFetched('users');
+    return response;
+  }, [markFetched]);
+
   const refreshCategories = useCallback(async () => {
     const response = await apiGet('/api/admin/categories');
     setCategories(ensureArray(response));
@@ -282,12 +295,13 @@ export function AdminDashboardProvider({ children }) {
     () => ({
       dashboard: refreshDashboardMetrics,
       admins: refreshAdmins,
+      users: refreshUsers,
       categories: refreshCategories,
       appointments: refreshAppointments,
       schedule: refreshSchedule,
       gallery: refreshGalleryItems
     }),
-    [refreshDashboardMetrics, refreshAdmins, refreshCategories, refreshAppointments, refreshSchedule, refreshGalleryItems]
+    [refreshDashboardMetrics, refreshAdmins, refreshUsers, refreshCategories, refreshAppointments, refreshSchedule, refreshGalleryItems]
   );
 
   const prefetchResources = useCallback(
@@ -378,20 +392,25 @@ export function AdminDashboardProvider({ children }) {
 
   const updateUserRole = useCallback(
     async (userId, role) => {
-      const previousUsers = recentUsers;
+      const previousRecentUsers = recentUsers;
+      const previousUsers = users;
       setRecentUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role } : user)));
+      setUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role } : user)));
       try {
         await apiPatch(`/api/admin/users/${userId}/role`, { role });
         showNotice({ tone: 'success', message: 'Role updated.' });
         markFetched('dashboard');
+        markFetched('users');
         refreshDashboardMetrics().catch(() => {});
+        refreshUsers().catch(() => {});
       } catch (err) {
-        setRecentUsers(previousUsers);
+        setRecentUsers(previousRecentUsers);
+        setUsers(previousUsers);
         showNotice({ tone: 'error', message: getErrorMessage(err, 'Unable to update role.') });
         throw err;
       }
     },
-    [recentUsers, refreshDashboardMetrics, showNotice, markFetched]
+    [recentUsers, users, refreshDashboardMetrics, refreshUsers, showNotice, markFetched]
   );
 
   const createCategory = useCallback(
@@ -786,6 +805,7 @@ export function AdminDashboardProvider({ children }) {
         analytics,
         settings,
         admins,
+        users,
         categories,
         galleryItems,
         galleryPagination,
@@ -801,6 +821,7 @@ export function AdminDashboardProvider({ children }) {
         prefetchResources,
         refreshDashboardMetrics,
         refreshAdmins,
+        refreshUsers,
         refreshCategories,
         refreshAppointments,
         refreshGalleryItems,
@@ -837,6 +858,7 @@ export function AdminDashboardProvider({ children }) {
       analytics,
       settings,
       admins,
+      users,
       categories,
       galleryItems,
       galleryPagination,
@@ -849,6 +871,7 @@ export function AdminDashboardProvider({ children }) {
       prefetchResources,
       refreshDashboardMetrics,
       refreshAdmins,
+      refreshUsers,
       refreshCategories,
       refreshAppointments,
       refreshGalleryItems,
