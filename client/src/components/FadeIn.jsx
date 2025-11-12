@@ -20,7 +20,7 @@ export default function FadeIn({
   const containerRef = useRef(null);
   const inView = useInView(containerRef, { once: !immediate, margin: '0px' });
   const items = useMemo(() => React.Children.toArray(children), [children]);
-  const MotionContainer = useMemo(() => motion(Component), [Component]);
+  const MotionContainer = useMemo(() => motion.create(Component), [Component]);
 
   useEffect(() => {
     if (immediate || prefersReduced) {

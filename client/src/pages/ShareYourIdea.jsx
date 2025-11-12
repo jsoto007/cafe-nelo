@@ -1118,6 +1118,16 @@ export default function ShareYourIdea() {
     [navigate, resetBookingState]
   );
 
+  const getBookingErrorMessage = useCallback((error) => {
+    if (error?.body?.error) {
+      return error.body.error;
+    }
+    if (error?.status === 402) {
+      return 'Payment failed. Please try another payment method.';
+    }
+    return 'Unable to complete your booking right now. Please try again.';
+  }, []);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!validate()) {
@@ -1158,8 +1168,12 @@ export default function ShareYourIdea() {
     try {
       await completeBooking(payload);
     } catch (error) {
-      setNotice('Request saved locally. We will follow up once connected.');
-      setNoticeTone('offline');
+      const message = getBookingErrorMessage(error);
+      setPaymentError(message);
+      const noticeMessage =
+        error?.status === 402 ? 'Payment failed. Please try another method.' : 'Request saved locally. We will follow up once connected.';
+      setNotice(noticeMessage);
+      setNoticeTone(error?.status === 402 ? 'error' : 'offline');
     } finally {
       setSubmitting(false);
     }
@@ -1198,7 +1212,16 @@ export default function ShareYourIdea() {
         Object.assign(payload, buildSquareFieldsFromToken(tokenResult));
         await completeBooking(payload);
       } catch (error) {
-        setPaymentError(error.message || 'Unable to verify your payment. Please try again.');
+        if (error?.status) {
+          const message = getBookingErrorMessage(error);
+          setPaymentError(message);
+          const noticeMessage =
+            error.status === 402 ? 'Payment failed. Please try another method.' : 'Request saved locally. We will follow up once connected.';
+          setNotice(noticeMessage);
+          setNoticeTone(error.status === 402 ? 'error' : 'offline');
+        } else {
+          setPaymentError(error.message || 'Unable to verify your payment. Please try again.');
+        }
       } finally {
         setWalletProcessing(null);
         setSubmitting(false);
@@ -1209,7 +1232,8 @@ export default function ShareYourIdea() {
       prepareBookingPayload,
       handleFileReadError,
       buildSquareFieldsFromToken,
-      completeBooking
+      completeBooking,
+      getBookingErrorMessage
     ]
   );
 

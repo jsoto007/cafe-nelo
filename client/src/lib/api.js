@@ -93,9 +93,22 @@ async function request(path, options = {}) {
     resetCsrfToken();
   }
 
+  let payload = null;
+  if (response.status !== 204) {
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+  }
+
   if (!response.ok) {
-    const error = new Error(`Request failed with status ${response.status}`);
+    const detail =
+      payload?.error ||
+      (payload?.errors && payload.errors.length ? payload.errors[0]?.message : null);
+    const error = new Error(detail || `Request failed with status ${response.status}`);
     error.status = response.status;
+    error.body = payload;
     throw error;
   }
 
@@ -103,7 +116,7 @@ async function request(path, options = {}) {
     return null;
   }
 
-  return response.json();
+  return payload;
 }
 
 export function apiGet(path, { signal } = {}) {
