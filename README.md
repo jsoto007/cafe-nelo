@@ -50,11 +50,13 @@ Available scripts:
 - `npm run lint` - lint source files with ESLint
 - `npm run format` - format with Prettier
 
+The dev server proxies `/api/*` to `http://127.0.0.1:5000`, keeping credentialed cookies and CSRF tokens aligned with the Flask backend.
+
 ## Environment variables
 
 | Name | Location | Description |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `client/.env` | Base URL for the Flask API (default `http://127.0.0.1:5000`) |
+| `VITE_API_BASE_URL` | `client/.env` | Base URL for the Flask API (default blank so relative paths hit the hosting origin – override this when the API lives on another host) |
 | `FLASK_ENV` | `server/.env` | Flask environment (`development`, `production`, etc.) |
 | `DATABASE_URI` | `server/.env` | Database connection string; fallback is a local SQLite file (`server/blackink_dev.db`) |
 | `SECRET_KEY` | `server/.env` | Secret key for Flask session security |

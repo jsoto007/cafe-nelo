@@ -85,7 +85,15 @@ def configure_app(app: Flask) -> SQLAlchemy:
     else:
         secure_cookie = secure_env.lower() in {"1", "true", "yes"}
     app.config.setdefault("SESSION_COOKIE_SECURE", secure_cookie)
-    app.config.setdefault("SESSION_COOKIE_SAMESITE", os.getenv("SESSION_COOKIE_SAMESITE", "Strict"))
+
+    same_site_env = os.getenv("SESSION_COOKIE_SAMESITE")
+    if same_site_env:
+        same_site_value = same_site_env
+    elif app.config["FLASK_ENV"] == "production":
+        same_site_value = "Strict"
+    else:
+        same_site_value = "Lax"
+    app.config.setdefault("SESSION_COOKIE_SAMESITE", same_site_value)
     app.config.setdefault("PERMANENT_SESSION_LIFETIME", timedelta(days=int(os.getenv("SESSION_LIFETIME_DAYS", "7"))))
 
     engine_options = _engine_defaults(app)

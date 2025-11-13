@@ -1,5 +1,4 @@
-const DEFAULT_BASE_URL =
-  import.meta.env.MODE === 'development' ? 'http://127.0.0.1:5000' : '';
+const DEFAULT_BASE_URL = '';
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE_URL;
 const BASE_URL = rawBaseUrl ? rawBaseUrl.replace(/\/+$/, '') : '';

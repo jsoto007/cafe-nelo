@@ -26,10 +26,12 @@ Build the React client (`npm run build --prefix client`) so Flask can serve the 
 | `FLASK_ENV` | Flask environment name |
 | `DATABASE_URI` | Database connection string (fallback is `sqlite:///blackink_dev.db` when empty) |
 | `SECRET_KEY` | Secret key for session security and signing |
+| `SESSION_COOKIE_SAMESITE` | Optional override for the session cookie's `SameSite` attribute (defaults to `Strict` in production and `Lax` in development). Use `None` only when the API and frontend are separated hosts *and* the service is served over HTTPS. |
 
 ## Development notes
 
 - CORS is limited to `http://127.0.0.1:5173` by default; adjust for production hosts.
+- When the React dev server runs on a different host/port (e.g., Vite on `127.0.0.1:5173`), you may need to build the client or proxy requests so the browser sees the API as same-site. Setting `SESSION_COOKIE_SAMESITE=None` also requires `SESSION_COOKIE_SECURE=true` and HTTPS, otherwise browsers will reject the cookie.
 - SQLAlchemy seeds demo gallery and testimonial data on first boot so the client can render immediately.
 - Consider integrating Flask-Migrate for schema changes (left as a TODO).
 
