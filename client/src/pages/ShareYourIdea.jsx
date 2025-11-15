@@ -1677,77 +1677,83 @@ export default function ShareYourIdea() {
               </span>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
-              {sessionOptions.length ? (
-                sessionOptions.map((option) => {
-                  const isActive = selectedSessionOptionId === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => {
-                        handleDurationSelect(option.duration_minutes);
-                        setSelectedSessionOptionId(option.id);
-                      }}
-                      className={classNames(
-                        'flex flex-col justify-between gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition',
-                        isActive
-                          ? 'border-gray-900 bg-gray-900 text-white shadow-sm dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-900 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-gray-100'
-                      )}
-                    >
-                      <div>
-                        <p className="text-sm font-semibold">
-                          {option.name || `${formatDurationLabel(option.duration_minutes)} session`}
-                        </p>
-                        <p className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-                          {pricingFormatter.format((option.price_cents ?? 0) / 100)}
-                        </p>
-                      </div>
-                      <span className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
-                        {formatDurationLabel(option.duration_minutes)}
+              {legacyDurationOptions.map((minutes) => {
+                const isActive = durationMinutes === minutes && !selectedSessionOptionId;
+                const isRecommended = minutes === suggestedMinutes;
+                return (
+                  <button
+                    key={minutes}
+                    type="button"
+                    onClick={() => handleDurationSelect(minutes)}
+                    className={classNames(
+                      'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition',
+                      isActive
+                        ? 'border-gray-900 bg-gray-900 text-white shadow-sm dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-900 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-gray-100'
+                    )}
+                    aria-pressed={isActive}
+                  >
+                    <span className="whitespace-nowrap">{formatDurationLabel(minutes)}</span>
+                    {isRecommended ? (
+                      <span
+                        className={classNames(
+                          'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]',
+                          isActive
+                            ? 'border-white text-white dark:border-gray-900 dark:text-gray-900'
+                            : 'border-gray-400 text-gray-500 dark:border-gray-500 dark:text-gray-300'
+                        )}
+                      >
+                        Recommended
                       </span>
-                    </button>
-                  );
-                })
-              ) : (
-                legacyDurationOptions.map((minutes) => {
-                  const isActive = durationMinutes === minutes && !selectedSessionOptionId;
-                  const isRecommended = minutes === suggestedMinutes;
-                  return (
-                    <button
-                      key={minutes}
-                      type="button"
-                      onClick={() => handleDurationSelect(minutes)}
-                      className={classNames(
-                        'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition',
-                        isActive
-                          ? 'border-gray-900 bg-gray-900 text-white shadow-sm dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-900 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-gray-100'
-                      )}
-                      aria-pressed={isActive}
-                    >
-                      <span className="whitespace-nowrap">{formatDurationLabel(minutes)}</span>
-                      {isRecommended ? (
-                        <span
-                          className={classNames(
-                            'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]',
-                            isActive
-                              ? 'border-white text-white dark:border-gray-900 dark:text-gray-900'
-                              : 'border-gray-400 text-gray-500 dark:border-gray-500 dark:text-gray-300'
-                          )}
-                        >
-                          Recommended
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })
-              )}
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
             {sessionOptionsError ? (
               <p className="mt-2 text-xs uppercase tracking-[0.2em] text-rose-500 dark:text-rose-400">
                 {sessionOptionsError}
               </p>
+            ) : null}
+            {sessionOptions.length ? (
+              <div className="mt-4 space-y-3 rounded-2xl border border-gray-200 bg-white/80 p-3 text-sm text-gray-900 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                  Session offers
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {sessionOptions.map((option) => {
+                    const isActive = selectedSessionOptionId === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => {
+                          handleDurationSelect(option.duration_minutes);
+                          setSelectedSessionOptionId(option.id);
+                        }}
+                        className={classNames(
+                          'flex flex-col justify-between gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition',
+                          isActive
+                            ? 'border-gray-900 bg-gray-900 text-white shadow-sm dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-900 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-gray-100'
+                        )}
+                      >
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {option.name || `${formatDurationLabel(option.duration_minutes)} session`}
+                          </p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                            {pricingFormatter.format((option.price_cents ?? 0) / 100)}
+                          </p>
+                        </div>
+                        <span className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
+                          {formatDurationLabel(option.duration_minutes)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ) : null}
             <div className="mt-4 rounded-2xl border border-gray-200 bg-white/80 p-3 text-sm text-gray-900 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100">
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
