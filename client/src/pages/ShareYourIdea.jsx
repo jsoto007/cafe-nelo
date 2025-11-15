@@ -6,6 +6,7 @@ import FadeIn from '../components/FadeIn.jsx';
 import Button from '../components/Button.jsx';
 import Card from '../components/Card.jsx';
 import SectionTitle from '../components/SectionTitle.jsx';
+import Dialog from '../components/Dialog.jsx';
 import { BOOKING_REQUIREMENTS } from '../data/bookingRequirements.js';
 import { apiGet, apiPost } from '../lib/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -73,6 +74,8 @@ const SIZE_OPTIONS = [
 ];
 
 const BOOKING_RECEIPT_KEY = 'black-ink:last-booking';
+const TERMS_ACCEPTED_KEY = 'blackworknyc:termsAccepted';
+const TERMS_PAGE_PATH = '/policies/terms';
 
 const FIELD_LABELS = {
   first_name: 'your first name',
@@ -280,6 +283,15 @@ export default function ShareYourIdea() {
   const [notice, setNotice] = useState(null);
   const [noticeTone, setNoticeTone] = useState('success');
   const [submitting, setSubmitting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.localStorage.getItem(TERMS_ACCEPTED_KEY) === 'true';
+  });
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [pendingSubmission, setPendingSubmission] = useState(false);
+  const [pendingWalletId, setPendingWalletId] = useState(null);
 
   const [availabilityConfig, setAvailabilityConfig] = useState(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -377,6 +389,16 @@ export default function ShareYourIdea() {
       setPayFullAmount(false);
     }
   }, [selectedSessionOption]);
+
+  useEffect(() => {
+    if (!termsAccepted) {
+      return;
+    }
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(TERMS_ACCEPTED_KEY, 'true');
+  }, [termsAccepted]);
 
   const depositCurrency = paymentConfig?.currency ?? 'USD';
   const bookingFeePercent = Math.max(
@@ -1274,8 +1296,7 @@ export default function ShareYourIdea() {
     return 'Unable to complete your booking right now. Please try again.';
   }, []);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const runBooking = useCallback(async () => {
     if (!validate()) {
       return;
     }
@@ -1323,10 +1344,33 @@ export default function ShareYourIdea() {
     } finally {
       setSubmitting(false);
     }
+  }, [
+    validate,
+    prepareBookingPayload,
+    handleFileReadError,
+    paymentConfig?.enabled,
+    buildSquareFieldsFromToken,
+    completeBooking,
+    getBookingErrorMessage
+  ]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!termsAccepted) {
+      setShowTermsDialog(true);
+      setPendingSubmission(true);
+      return;
+    }
+    await runBooking();
   };
 
   const handleWalletPayment = useCallback(
     async (walletId) => {
+      if (!termsAccepted) {
+        setShowTermsDialog(true);
+        setPendingWalletId(walletId);
+        return;
+      }
       if (!validate()) {
         return;
       }
@@ -1374,6 +1418,7 @@ export default function ShareYourIdea() {
       }
     },
     [
+      termsAccepted,
       validate,
       prepareBookingPayload,
       handleFileReadError,
@@ -1382,6 +1427,34 @@ export default function ShareYourIdea() {
       getBookingErrorMessage
     ]
   );
+
+  useEffect(() => {
+    if (!(termsAccepted && pendingSubmission)) {
+      return;
+    }
+    setPendingSubmission(false);
+    runBooking();
+  }, [termsAccepted, pendingSubmission, runBooking]);
+
+  useEffect(() => {
+    if (!(termsAccepted && pendingWalletId)) {
+      return;
+    }
+    const walletId = pendingWalletId;
+    setPendingWalletId(null);
+    handleWalletPayment(walletId);
+  }, [termsAccepted, pendingWalletId, handleWalletPayment]);
+
+  const handleAgreeToTerms = () => {
+    setTermsAccepted(true);
+    setShowTermsDialog(false);
+  };
+
+  const handleCloseTermsDialog = () => {
+    setShowTermsDialog(false);
+    setPendingSubmission(false);
+    setPendingWalletId(null);
+  };
 
   const renderCalendarDay = (entry) => {
     const { date, inCurrentMonth } = entry;
@@ -2206,6 +2279,13 @@ export default function ShareYourIdea() {
                 otherwise. A fully refundable Square deposit locks in your time slot.
               </p>
               <ul className="space-y-1">{requirementList}</ul>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                By continuing you confirm you have read the{' '}
+                <Link to={TERMS_PAGE_PATH} className="underline">
+                  Terms of Service &amp; Tattoo Consent
+                </Link>
+                .
+              </p>
             </div>
             <div className="rounded-2xl border border-dashed border-gray-300 p-4 text-xs uppercase tracking-[0.2em] text-gray-500 dark:border-gray-700 dark:text-gray-400">
               Need help? Email{' '}
@@ -2214,6 +2294,29 @@ export default function ShareYourIdea() {
               </a>
             </div>
           </Card>
+          <Dialog
+            open={showTermsDialog}
+            onClose={handleCloseTermsDialog}
+            title="Tattoo Consent &amp; Terms"
+            footer={
+              <>
+                <Button as={Link} to={TERMS_PAGE_PATH} variant="secondary" onClick={handleCloseTermsDialog}>
+                  Read full terms
+                </Button>
+                <Button type="button" onClick={handleAgreeToTerms}>
+                  I agree
+                </Button>
+              </>
+            }
+          >
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Before we can confirm your appointment, please review our Terms of Service and Tattoo Consent Form.
+            </p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Once you agree, we remember your acknowledgement locally so this popup only appears again if you clear
+              your browser storage.
+            </p>
+          </Dialog>
         </FadeIn>
       </div>
     </main>

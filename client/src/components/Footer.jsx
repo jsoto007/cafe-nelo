@@ -34,9 +34,9 @@ export default function Footer() {
               </Link>
             </div>
           </div>
-          <a href="#faq" className="uppercase tracking-[0.2em] transition hover:text-black dark:hover:text-gray-100">
+          <Link to="/policies/terms" className="uppercase tracking-[0.2em] transition hover:text-black dark:hover:text-gray-100">
             Policies
-          </a>
+          </Link>
           <a href="#top" className="uppercase tracking-[0.2em] transition hover:text-black dark:hover:text-gray-100">
             Back to top
           </a>

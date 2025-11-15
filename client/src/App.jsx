@@ -16,6 +16,7 @@ import BlogLayout from './pages/blog/BlogLayout.jsx';
 import BlogIndex from './pages/blog/BlogIndex.jsx';
 import TattooAftercare from './pages/blog/TattooAftercare.jsx';
 import TattooFaq from './pages/blog/TattooFaq.jsx';
+import Policies from './pages/Policies.jsx';
 
 export default function App() {
   const location = useLocation();
@@ -41,6 +42,8 @@ export default function App() {
         <Route path="/activate-account" element={<ActivateAccount />} />
         <Route path="/share-your-idea" element={<ShareYourIdea />} />
         <Route path="/booking/confirmation" element={<BookingConfirmation />} />
+        <Route path="/policies" element={<Navigate to="/policies/terms" replace />} />
+        <Route path="/policies/terms" element={<Policies />} />
         <Route path="/blog" element={<BlogLayout />}>
           <Route index element={<BlogIndex />} />
           <Route path="aftercare" element={<TattooAftercare />} />
