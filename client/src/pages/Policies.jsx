@@ -41,7 +41,7 @@ const DISCLAIMER_POINTS = [
 const ACCOUNTS_POINTS = [
   'You are solely responsible for all activities that occur under your account and must maintain the confidentiality of any credentials provided.',
   'Blackworknyc LLC may limit, suspend, deactivate, or cancel your account at any time without notice if you provide false information or violate these Terms.',
-  'You may cancel your account at any time via the cancel feature on the site or by emailing blackworknyc@gmail.com.'
+  'You may cancel your account at any time via the cancel feature on the site or by emailing artem@blackworknyc.com.'
 ];
 
 const PAYMENT_POINTS = [
@@ -258,7 +258,7 @@ export default function Policies() {
           <p>If you have any questions, contact:</p>
           <p>
             Blackworknyc LLC<br />
-            Email: <a className="underline" href="mailto:booking@blackworknyc.com">booking@blackworknyc.com</a>
+            Email: <a className="underline" href="mailto:artem@blackworknyc.com">artem@blackworknyc.com</a>
           </p>
         </section>
       </div>

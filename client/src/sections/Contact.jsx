@@ -12,7 +12,7 @@ const CONTACT_POINTS = [
   {
     id: 'email',
     heading: 'Email',
-    value: 'hello@blackink.tattoo',
+    value: 'artem@blackworknyc.com',
     body: 'Best for sharing reference links and photos.'
   },
   {
@@ -26,7 +26,7 @@ const CONTACT_POINTS = [
 export default function Contact() {
   return (
     <section id="contact" className="bg-gray-50 py-16 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <FadeIn className="mx-auto flex max-w-6xl flex-col gap-12 px-6" delayStep={0.16}>
+      <FadeIn className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-6" delayStep={0.16}>
         <SectionTitle
           eyebrow="Contact"
           title="Stay connected"
@@ -36,7 +36,24 @@ export default function Contact() {
           {CONTACT_POINTS.map((item) => (
             <Card key={item.id} className="space-y-3">
               <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">{item.heading}</p>
-              <p className="text-base font-semibold uppercase tracking-[0.2em] text-gray-900 dark:text-gray-100">{item.value}</p>
+              <p
+                className={`text-sm sm:text-base font-semibold uppercase tracking-[0.2em] text-gray-900 dark:text-gray-100 break-words ${
+                  item.id === 'email' ? 'whitespace-nowrap' : 'whitespace-normal'
+                }`}
+              >
+                {item.id === 'studio' ? (
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(item.value)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {item.value}
+                  </a>
+                ) : (
+                  item.value
+                )}
+              </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">{item.body}</p>
             </Card>
           ))}

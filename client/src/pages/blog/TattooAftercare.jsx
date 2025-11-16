@@ -87,7 +87,7 @@ export default function TattooAftercare() {
         <p>
           If at any point the area becomes excessively swollen, hot to the touch, or produces unusual discharge, contact
           your artist right away. We&rsquo;re here to help you through the full healing process. Email us any time at{' '}
-          <a href="mailto:blackworknyc@gmail.com">blackworknyc@gmail.com</a>.
+          <a href="mailto:artem@blackworknyc.com">artem@blackworknyc.com</a>.
         </p>
       </section>
     </article>

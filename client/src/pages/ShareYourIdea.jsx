@@ -2253,7 +2253,7 @@ export default function ShareYourIdea() {
               </p>
             ) : paymentsUnavailable ? (
               <p className="text-sm text-rose-500 dark:text-rose-400">
-                Payments are temporarily unavailable. Please email blackworknyc@gmail.com to complete your booking.
+                Payments are temporarily unavailable. Please email artem@blackworknyc.com to complete your booking.
               </p>
             ) : (
               <p className="text-sm text-gray-600 dark:text-gray-300">Loading the secure payment form…</p>
@@ -2289,8 +2289,8 @@ export default function ShareYourIdea() {
             </div>
             <div className="rounded-2xl border border-dashed border-gray-300 p-4 text-xs uppercase tracking-[0.2em] text-gray-500 dark:border-gray-700 dark:text-gray-400">
               Need help? Email{' '}
-              <a href="mailto:blackworknyc@gmail.com" className="underline hover:text-gray-900 dark:hover:text-gray-100">
-                blackworknyc@gmail.com
+              <a href="mailto:artem@blackworknyc.com" className="underline hover:text-gray-900 dark:hover:text-gray-100">
+                artem@blackworknyc.com
               </a>
             </div>
           </Card>

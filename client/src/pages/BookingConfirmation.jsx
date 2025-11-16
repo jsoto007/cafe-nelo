@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 
 const BOOKING_RECEIPT_KEY = 'black-ink:last-booking';
 const LOCATION_LINE = '245 Mercer Street, Suite 4F, New York, NY';
-const STUDIO_EMAIL = 'blackworknyc@gmail.com';
+const STUDIO_EMAIL = 'artem@blackworknyc.com';
 const DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(LOCATION_LINE)}`;
 const STATUS_DISPLAY = {
   pending: {

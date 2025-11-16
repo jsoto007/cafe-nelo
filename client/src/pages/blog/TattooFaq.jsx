@@ -34,8 +34,8 @@ export default function TattooFaq() {
       <footer>
         <p>
           Still curious about something? Email us at{' '}
-          <a className="font-medium text-black underline dark:text-gray-100" href="mailto:blackworknyc@gmail.com">
-            blackworknyc@gmail.com
+          <a className="font-medium text-black underline dark:text-gray-100" href="mailto:artem@blackworknyc.com">
+            artem@blackworknyc.com
           </a>{' '}
           and we will get back to you soon.
         </p>
