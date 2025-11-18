@@ -22,6 +22,15 @@ const MAX_MONTH_HORIZON = 5;
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp']);
 const ACCEPTED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.heic', '.heif', '.webp'];
+const DAY_LABELS = {
+  sunday: 'Sunday',
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday'
+};
 
 const PLACEMENT_BASE_MINUTES = {
   finger: 60,
@@ -209,6 +218,14 @@ function formatDurationLabel(minutes) {
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
+function coerceMinimumDurationMinutes(value) {
+  const minutes = Number(value);
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return SLOT_INTERVAL_MINUTES;
+  }
+  return Math.max(SLOT_INTERVAL_MINUTES, Math.ceil(minutes / SLOT_INTERVAL_MINUTES) * SLOT_INTERVAL_MINUTES);
+}
+
 function calculateBookingFeeAmount(totalCents, percent) {
   if (!totalCents) {
     return 0;
@@ -340,7 +357,33 @@ export default function ShareYourIdea() {
   const passwordRef = useRef(null);
 
   const minimumDuration = availabilityConfig?.minimumDurationMinutes ?? SLOT_INTERVAL_MINUTES;
-
+  const selectedDaySlug = selectedDate ? JS_DAY_SLUGS[parseDateKey(selectedDate).getDay()] : null;
+  const selectedDayConfig = selectedDaySlug ? availabilityConfig?.operatingHoursMap?.get(selectedDaySlug) : null;
+  const selectedDayMinimumMinutes =
+    selectedDayConfig?.minimum_duration_minutes ?? minimumDuration;
+  const effectiveMinimumDurationMinutes = Math.max(minimumDuration, selectedDayMinimumMinutes);
+  const formattedSelectedDate = selectedDate ? DAY_FORMATTER.format(parseDateKey(selectedDate)) : '';
+  const hasDaySpecificMinimum =
+    Boolean(selectedDate && selectedDayConfig?.minimum_duration_minutes) &&
+    selectedDayConfig.minimum_duration_minutes > minimumDuration;
+  const dayMinimumLabel = hasDaySpecificMinimum
+    ? formatDurationLabel(selectedDayConfig.minimum_duration_minutes)
+    : null;
+  const workingWindow = slotsMeta.workingWindow;
+  const workingWindowRange =
+    workingWindow && workingWindow.open_time && workingWindow.close_time
+      ? `${workingWindow.open_time}–${workingWindow.close_time}`
+      : null;
+  const workingWindowLabel = workingWindow?.day
+    ? DAY_LABELS[workingWindow.day] ??
+      workingWindow.day.replace(/^\w/, (char) => char.toUpperCase())
+    : null;
+  const workingWindowNotice =
+    workingWindowRange && (formattedSelectedDate || workingWindowLabel)
+      ? `Available hours on ${formattedSelectedDate || workingWindowLabel || 'this date'} are ${workingWindowRange}.`
+      : workingWindowRange
+      ? `Available hours are ${workingWindowRange}.`
+      : null;
   const requirementList = useMemo(
     () =>
       BOOKING_REQUIREMENTS.map((item, index) => (
@@ -353,27 +396,50 @@ export default function ShareYourIdea() {
 
   const calendarDays = useMemo(() => buildCalendarDays(calendarMonth), [calendarMonth]);
 
+  const minimumDurationNotice =
+    selectedDate &&
+    effectiveMinimumDurationMinutes &&
+    durationMinutes < effectiveMinimumDurationMinutes
+      ? `Bookings on ${formattedSelectedDate} require at least ${formatDurationLabel(
+          effectiveMinimumDurationMinutes
+        )}.`
+      : null;
+
   const legacyDurationOptions = useMemo(() => {
     const options = new Set();
     const interval = availabilityConfig?.slotIntervalMinutes ?? SLOT_INTERVAL_MINUTES;
     const upperBound = interval * 6; // show up to ~6 blocks by default
-    for (let minutes = minimumDuration; minutes <= upperBound; minutes += interval) {
+    for (let minutes = effectiveMinimumDurationMinutes; minutes <= upperBound; minutes += interval) {
       options.add(minutes);
     }
     options.add(suggestedMinutes); // ensure the recommended value is always present
     return Array.from(options).sort((a, b) => a - b);
-  }, [minimumDuration, suggestedMinutes, availabilityConfig?.slotIntervalMinutes]);
-
-  const formattedSelectedDate = selectedDate ? DAY_FORMATTER.format(parseDateKey(selectedDate)) : '';
+  }, [
+    effectiveMinimumDurationMinutes,
+    suggestedMinutes,
+    availabilityConfig?.slotIntervalMinutes
+  ]);
   const canGoPrev = calendarMonth.getTime() > minMonth.getTime();
   const canGoNext = calendarMonth.getTime() < maxMonth.getTime();
   const hasStoredIdentity = Boolean(isAuthenticated && account?.has_identity_documents);
   const shouldSkipIdentityUpload = hasStoredIdentity && !forceIdentityUpdate;
   const signedInAccountId = isAuthenticated && account?.id ? account.id : null;
+  const availableSessionOptions = useMemo(
+    () =>
+      sessionOptions.filter(
+        (option) => (option?.duration_minutes ?? 0) >= effectiveMinimumDurationMinutes
+      ),
+    [sessionOptions, effectiveMinimumDurationMinutes]
+  );
   const selectedSessionOption =
-    sessionOptions.find((option) => option.id === selectedSessionOptionId) ?? null;
+    availableSessionOptions.find((option) => option.id === selectedSessionOptionId) ?? null;
   const recommendedSessionOption =
-    sessionOptions.find((option) => option.duration_minutes === suggestedMinutes) ?? null;
+    availableSessionOptions.find((option) => option.duration_minutes === suggestedMinutes) ?? null;
+  useEffect(() => {
+    if (selectedSessionOptionId && !availableSessionOptions.some((option) => option.id === selectedSessionOptionId)) {
+      setSelectedSessionOptionId(null);
+    }
+  }, [availableSessionOptions, selectedSessionOptionId]);
   const recommendedCurrency = recommendedPricing?.currency ?? paymentConfig?.currency ?? 'USD';
   useEffect(() => {
     if (!selectedSessionOption) {
@@ -450,19 +516,23 @@ export default function ShareYourIdea() {
     try {
       const data = await apiGet('/api/availability/config');
       const closures = new Set(data?.closures || []);
-      const operatingHours = Array.isArray(data?.operating_hours) ? data.operating_hours : [];
+      const rawOperatingHours = Array.isArray(data?.operating_hours) ? data.operating_hours : [];
+      const normalizedOperatingHours = rawOperatingHours.map((entry) => ({
+        ...entry,
+        minimum_duration_minutes: coerceMinimumDurationMinutes(entry?.minimum_duration_minutes)
+      }));
       const operatingHoursMap = new Map();
-      operatingHours.forEach((entry) => {
+      normalizedOperatingHours.forEach((entry) => {
         if (entry?.day) {
           operatingHoursMap.set(entry.day, entry);
         }
       });
       setAvailabilityConfig({
-        operatingHours,
+        operatingHours: normalizedOperatingHours,
         operatingHoursMap,
         closures,
         slotIntervalMinutes: data?.slot_interval_minutes || SLOT_INTERVAL_MINUTES,
-        minimumDurationMinutes: data?.minimum_duration_minutes || SLOT_INTERVAL_MINUTES
+        minimumDurationMinutes: coerceMinimumDurationMinutes(data?.minimum_duration_minutes)
       });
       setAvailabilityError(null);
     } catch (error) {
@@ -501,7 +571,7 @@ export default function ShareYourIdea() {
       } catch (error) {
         setAvailableSlots([]);
         setSlotsMeta({ isClosed: false, fullyBooked: false, workingWindow: null });
-        setSlotsError('Unable to load available time slots.');
+        setSlotsError(error?.message || 'Unable to load available time slots.');
       } finally {
         setSlotsLoading(false);
       }
@@ -738,7 +808,7 @@ export default function ShareYourIdea() {
     const interval = availabilityConfig.slotIntervalMinutes ?? SLOT_INTERVAL_MINUTES;
 
     if (!form.placement || !form.size) {
-      const base = availabilityConfig.minimumDurationMinutes;
+      const base = effectiveMinimumDurationMinutes;
       setSuggestedMinutes(base);
       if (!durationManuallySet) {
         setDurationMinutes(base);
@@ -749,14 +819,26 @@ export default function ShareYourIdea() {
     const suggested = calculateSuggestedDurationMinutes(
       form.placement,
       form.size,
-      availabilityConfig.minimumDurationMinutes,
+      effectiveMinimumDurationMinutes,
       interval
     );
     setSuggestedMinutes(suggested);
     if (!durationManuallySet) {
       setDurationMinutes(suggested);
     }
-  }, [availabilityConfig, form.placement, form.size, durationManuallySet]);
+  }, [
+    availabilityConfig,
+    form.placement,
+    form.size,
+    durationManuallySet,
+    effectiveMinimumDurationMinutes
+  ]);
+
+  useEffect(() => {
+    if (durationMinutes < effectiveMinimumDurationMinutes) {
+      setDurationMinutes(effectiveMinimumDurationMinutes);
+    }
+  }, [durationMinutes, effectiveMinimumDurationMinutes]);
 
   useEffect(() => {
     if (!availabilityConfig) {
@@ -767,8 +849,15 @@ export default function ShareYourIdea() {
       setSlotsMeta({ isClosed: false, fullyBooked: false, workingWindow: null });
       return;
     }
-    fetchSlots(selectedDate, durationMinutes);
-  }, [availabilityConfig, selectedDate, durationMinutes, fetchSlots]);
+    const requestDuration = Math.max(durationMinutes, effectiveMinimumDurationMinutes);
+    fetchSlots(selectedDate, requestDuration);
+  }, [
+    availabilityConfig,
+    selectedDate,
+    durationMinutes,
+    fetchSlots,
+    effectiveMinimumDurationMinutes
+  ]);
 
   useEffect(() => {
     setSelectedSlot(null);
@@ -1788,13 +1877,13 @@ export default function ShareYourIdea() {
                 {sessionOptionsError}
               </p>
             ) : null}
-            {sessionOptions.length ? (
+            {availableSessionOptions.length ? (
               <div className="mt-4 space-y-3 rounded-2xl border border-gray-200 bg-white/80 p-3 text-sm text-gray-900 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
                   Session offers
                 </p>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  {sessionOptions.map((option) => {
+                  {availableSessionOptions.map((option) => {
                     const isActive = selectedSessionOptionId === option.id;
                     return (
                       <button
@@ -1827,6 +1916,11 @@ export default function ShareYourIdea() {
                   })}
                 </div>
               </div>
+            ) : null}
+            {!availableSessionOptions.length && sessionOptions.length ? (
+              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                No preset session offers meet the minimum duration for this day; choose a custom length above.
+              </p>
             ) : null}
             <div className="mt-4 rounded-2xl border border-gray-200 bg-white/80 p-3 text-sm text-gray-900 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100">
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
@@ -1899,11 +1993,26 @@ export default function ShareYourIdea() {
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-2">{calendarDays.map(renderCalendarDay)}</div>
+              {dayMinimumLabel ? (
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-700 dark:text-gray-400">
+                  Minimum session length on this day: {dayMinimumLabel}.
+                </p>
+              ) : null}
               {availabilityError ? (
                 <p className="text-xs uppercase tracking-[0.3em] text-rose-500 dark:text-rose-400">{availabilityError}</p>
               ) : null}
               {errors.selected_date ? (
                 <p className="text-xs uppercase tracking-[0.2em] text-rose-500 dark:text-rose-400">{errors.selected_date}</p>
+              ) : null}
+              {minimumDurationNotice ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs uppercase tracking-[0.2em] text-rose-600 dark:border-rose-900/60 dark:bg-rose-950/60 dark:text-rose-200">
+                  {minimumDurationNotice}
+                </div>
+              ) : null}
+              {workingWindowNotice ? (
+                <div className="rounded-xl border border-gray-300/60 bg-white/70 px-3 py-2 text-xs uppercase tracking-[0.2em] text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200">
+                  {workingWindowNotice}
+                </div>
               ) : null}
             </div>
             <div className="space-y-3">

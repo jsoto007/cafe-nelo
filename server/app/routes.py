@@ -52,14 +52,58 @@ WEEK_DAYS = (
     "sunday",
 )
 
+MINIMUM_APPOINTMENT_DURATION_MINUTES = 60
+
 DEFAULT_OPERATING_HOURS = [
-    {"day": "monday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
-    {"day": "tuesday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
-    {"day": "wednesday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
-    {"day": "thursday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
-    {"day": "friday", "is_open": True, "open_time": "10:00", "close_time": "18:00"},
-    {"day": "saturday", "is_open": True, "open_time": "10:00", "close_time": "16:00"},
-    {"day": "sunday", "is_open": False, "open_time": "10:00", "close_time": "14:00"},
+    {
+        "day": "monday",
+        "is_open": True,
+        "open_time": "10:00",
+        "close_time": "18:00",
+        "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+    },
+    {
+        "day": "tuesday",
+        "is_open": True,
+        "open_time": "10:00",
+        "close_time": "18:00",
+        "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+    },
+    {
+        "day": "wednesday",
+        "is_open": True,
+        "open_time": "10:00",
+        "close_time": "18:00",
+        "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+    },
+    {
+        "day": "thursday",
+        "is_open": True,
+        "open_time": "10:00",
+        "close_time": "18:00",
+        "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+    },
+    {
+        "day": "friday",
+        "is_open": True,
+        "open_time": "10:00",
+        "close_time": "18:00",
+        "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+    },
+    {
+        "day": "saturday",
+        "is_open": True,
+        "open_time": "10:00",
+        "close_time": "16:00",
+        "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+    },
+    {
+        "day": "sunday",
+        "is_open": False,
+        "open_time": "10:00",
+        "close_time": "14:00",
+        "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+    },
 ]
 
 HOURLY_RATE_SETTING_KEY = "studio_hourly_rate_cents"
@@ -894,6 +938,32 @@ def _coerce_time(value, default: time) -> time:
         return default
 
 
+def _coerce_minimum_duration(value, default: int = MINIMUM_APPOINTMENT_DURATION_MINUTES) -> int:
+    if isinstance(value, int):
+        minutes = value
+    else:
+        try:
+            minutes = int(value)
+        except (TypeError, ValueError):
+            return default
+    if minutes < default:
+        minutes = default
+    if minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
+        blocks = math.ceil(minutes / DEFAULT_SLOT_INTERVAL_MINUTES)
+        minutes = blocks * DEFAULT_SLOT_INTERVAL_MINUTES
+    return minutes
+
+
+def _minimum_duration_for_weekday(weekday: int, *, hours_map=None) -> int:
+    lookup = hours_map or fetch_working_hours_map()
+    if not lookup:
+        return MINIMUM_APPOINTMENT_DURATION_MINUTES
+    entry = lookup.get(weekday)
+    if not entry:
+        return MINIMUM_APPOINTMENT_DURATION_MINUTES
+    return _coerce_minimum_duration(entry.get("minimum_duration_minutes"))
+
+
 def _working_hours_from_records(records):
     result = {}
     for record in records:
@@ -902,6 +972,7 @@ def _working_hours_from_records(records):
             "is_open": record.is_open,
             "open_time": record.opens_at,
             "close_time": record.closes_at,
+            "minimum_duration_minutes": _coerce_minimum_duration(record.minimum_duration_minutes),
         }
     return result
 
@@ -923,6 +994,7 @@ def fetch_working_hours_map():
             "is_open": bool(entry.get("is_open", True)),
             "open_time": _coerce_time(entry.get("open_time"), time(hour=10)),
             "close_time": _coerce_time(entry.get("close_time"), time(hour=18)),
+            "minimum_duration_minutes": _coerce_minimum_duration(entry.get("minimum_duration_minutes")),
         }
     return result
 
@@ -941,6 +1013,7 @@ def fetch_working_hours_json():
                     "is_open": record["is_open"],
                     "open_time": record["open_time"].strftime("%H:%M"),
                     "close_time": record["close_time"].strftime("%H:%M"),
+                    "minimum_duration_minutes": _coerce_minimum_duration(record.get("minimum_duration_minutes")),
                 }
             )
         else:
@@ -950,6 +1023,7 @@ def fetch_working_hours_json():
                     "is_open": False,
                     "open_time": "00:00",
                     "close_time": "00:00",
+                    "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
                 }
             )
     return output
@@ -1034,8 +1108,15 @@ def collect_blocked_intervals(day_start: datetime, day_end: datetime, *, ignore_
     return intervals
 
 
-def build_available_slots(target_date: date, duration_minutes: int | None, *, ignore_appointment_id: int | None = None):
-    hours_map = fetch_working_hours_map()
+def build_available_slots(
+    target_date: date,
+    duration_minutes: int | None,
+    *,
+    ignore_appointment_id: int | None = None,
+    minimum_duration_minutes: int | None = None,
+    hours_map=None,
+):
+    hours_map = hours_map or fetch_working_hours_map()
     weekday = target_date.weekday()
     window = hours_map.get(weekday)
     if not window or not window.get("is_open"):
@@ -1054,10 +1135,10 @@ def build_available_slots(target_date: date, duration_minutes: int | None, *, ig
     day_end = datetime.combine(target_date, close_time)
 
     slot_interval = timedelta(minutes=DEFAULT_SLOT_INTERVAL_MINUTES)
-    requested_duration_minutes = max(
-        duration_minutes or MINIMUM_APPOINTMENT_DURATION_MINUTES,
-        MINIMUM_APPOINTMENT_DURATION_MINUTES,
-    )
+    weekday_minimum = _minimum_duration_for_weekday(weekday, hours_map=hours_map)
+    if minimum_duration_minutes is not None:
+        weekday_minimum = max(weekday_minimum, _coerce_minimum_duration(minimum_duration_minutes))
+    requested_duration_minutes = max(duration_minutes or weekday_minimum, weekday_minimum)
     if requested_duration_minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
         requested_duration_minutes = (
             (requested_duration_minutes // DEFAULT_SLOT_INTERVAL_MINUTES) + 1
@@ -1087,6 +1168,7 @@ def build_available_slots(target_date: date, duration_minutes: int | None, *, ig
         "day": window["day"],
         "open_time": open_time.strftime("%H:%M"),
         "close_time": close_time.strftime("%H:%M"),
+        "minimum_duration_minutes": weekday_minimum,
     }
 
 
@@ -1230,32 +1312,42 @@ def public_availability_slots():
     placement = request.args.get("placement")
     size = request.args.get("size")
 
-    if duration_param is not None and duration_param < MINIMUM_APPOINTMENT_DURATION_MINUTES:
+    working_hours_map = fetch_working_hours_map()
+    weekday = target_date.weekday()
+    day_minimum = _minimum_duration_for_weekday(weekday, hours_map=working_hours_map)
+    day_label = INDEX_TO_DAY.get(weekday, "this day").capitalize()
+
+    if duration_param is not None and duration_param < day_minimum:
+        hours_value = day_minimum / 60
+        duration_desc = (
+            f"{int(hours_value)} hour{'s' if hours_value != 1 else ''}"
+            if hours_value.is_integer()
+            else f"{hours_value:.1f} hours"
+        )
         return (
-            jsonify(
-                {
-                    "error": f"Minimum appointment duration is {MINIMUM_APPOINTMENT_DURATION_MINUTES // 60} hour.",
-                }
-            ),
+            jsonify({"error": f"Minimum appointment duration on {day_label} is {duration_desc}."}),
             400,
         )
 
     duration_minutes = duration_param or calculate_suggested_duration_minutes(placement, size)
     if duration_minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
         duration_minutes = int(
-            max(
-                MINIMUM_APPOINTMENT_DURATION_MINUTES,
-                round(duration_minutes / DEFAULT_SLOT_INTERVAL_MINUTES) * DEFAULT_SLOT_INTERVAL_MINUTES,
-            )
+            round(duration_minutes / DEFAULT_SLOT_INTERVAL_MINUTES) * DEFAULT_SLOT_INTERVAL_MINUTES
         )
+    duration_minutes = max(duration_minutes, day_minimum)
 
-    slots, window = build_available_slots(target_date, duration_minutes)
+    slots, window = build_available_slots(
+        target_date,
+        duration_minutes,
+        minimum_duration_minutes=day_minimum,
+        hours_map=working_hours_map,
+    )
     return jsonify(
         {
             "date": target_date.isoformat(),
             "duration_minutes": duration_minutes,
             "slot_interval_minutes": DEFAULT_SLOT_INTERVAL_MINUTES,
-            "minimum_duration_minutes": MINIMUM_APPOINTMENT_DURATION_MINUTES,
+            "minimum_duration_minutes": day_minimum,
             "working_window": window,
             "slots": [
                 {
@@ -1993,12 +2085,14 @@ def admin_update_schedule():
         weekday_index = DAY_TO_INDEX[day]
         open_time_obj = _coerce_time(open_time, time(hour=10))
         close_time_obj = _coerce_time(close_time, time(hour=18))
+        minimum_duration = _coerce_minimum_duration(entry.get("minimum_duration_minutes"))
         working_hour_updates.append(
             {
                 "weekday": weekday_index,
                 "is_open": is_open,
                 "open_time": open_time_obj,
                 "close_time": close_time_obj,
+                "minimum_duration_minutes": minimum_duration,
                 "day": day,
                 "open_time_str": open_time,
                 "close_time_str": close_time,
@@ -2010,6 +2104,7 @@ def admin_update_schedule():
                 "is_open": is_open,
                 "open_time": open_time,
                 "close_time": close_time,
+                "minimum_duration_minutes": minimum_duration,
             }
         )
 
@@ -2046,6 +2141,7 @@ def admin_update_schedule():
         record.is_open = update["is_open"]
         record.opens_at = update["open_time"]
         record.closes_at = update["close_time"]
+        record.minimum_duration_minutes = update["minimum_duration_minutes"]
     for weekday, record in existing_hours.items():
         if weekday not in provided_weekdays:
             record.is_open = False
@@ -2707,6 +2803,15 @@ def admin_create_appointment():
     if scheduled_start and (scheduled_start.minute % DEFAULT_SLOT_INTERVAL_MINUTES != 0 or scheduled_start.second or scheduled_start.microsecond):
         return jsonify({"error": "Start time must align with the hour."}), 400
 
+    start_minimum_duration = MINIMUM_APPOINTMENT_DURATION_MINUTES
+    start_day_label = None
+    start_hours_map = None
+    if scheduled_start:
+        start_hours_map = fetch_working_hours_map()
+        start_weekday = scheduled_start.date().weekday()
+        start_minimum_duration = _minimum_duration_for_weekday(start_weekday, hours_map=start_hours_map)
+        start_day_label = INDEX_TO_DAY.get(start_weekday, "this day").capitalize()
+
     duration_minutes = payload.get("duration_minutes")
     if duration_minutes is not None:
         try:
@@ -2735,17 +2840,32 @@ def admin_create_appointment():
             return jsonify({"error": "Client not found."}), 404
 
     if duration_minutes is not None:
-        if duration_minutes < MINIMUM_APPOINTMENT_DURATION_MINUTES:
-            return jsonify(
-                {
-                    "error": f"Minimum session length is {MINIMUM_APPOINTMENT_DURATION_MINUTES // 60} hour.",
-                }
-            ), 400
+        if duration_minutes < start_minimum_duration:
+            label = f" on {start_day_label}" if start_day_label else ""
+            hours_label = start_minimum_duration / 60
+            hours_display = (
+                f"{int(hours_label)} hour{'s' if hours_label != 1 else ''}"
+                if hours_label.is_integer()
+                else f"{hours_label:.1f} hours"
+            )
+            return (
+                jsonify(
+                    {
+                        "error": f"Minimum session length{label} is {hours_display}.",
+                    }
+                ),
+                400,
+            )
         if duration_minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
             return jsonify({"error": "Duration must use whole-hour increments."}), 400
 
     if scheduled_start and duration_minutes:
-        available_slots, _window = build_available_slots(scheduled_start.date(), duration_minutes)
+        available_slots, _window = build_available_slots(
+            scheduled_start.date(),
+            duration_minutes,
+            minimum_duration_minutes=start_minimum_duration,
+            hours_map=start_hours_map,
+        )
         slot_available = any(
             abs(int((slot["start"] - scheduled_start).total_seconds())) < 60 for slot in available_slots
         )
@@ -2923,6 +3043,15 @@ def create_appointment():
     elif scheduled_start < datetime.utcnow():
         errors.append({"field": "scheduled_start", "message": "Select a future time slot."})
 
+    booking_hours_map = None
+    booking_minimum_duration = MINIMUM_APPOINTMENT_DURATION_MINUTES
+    booking_day_label = None
+    if scheduled_start:
+        booking_hours_map = fetch_working_hours_map()
+        booking_weekday = scheduled_start.date().weekday()
+        booking_minimum_duration = _minimum_duration_for_weekday(booking_weekday, hours_map=booking_hours_map)
+        booking_day_label = INDEX_TO_DAY.get(booking_weekday, "this day").capitalize()
+
     duration_minutes = payload.get("duration_minutes")
     if duration_minutes is not None:
         try:
@@ -3028,18 +3157,30 @@ def create_appointment():
     if session_option:
         duration_minutes = session_option.duration_minutes
 
-    if duration_minutes < MINIMUM_APPOINTMENT_DURATION_MINUTES:
+    if duration_minutes < booking_minimum_duration:
+        hours_label = booking_minimum_duration / 60
+        duration_desc = (
+            f"{int(hours_label)} hour{'s' if hours_label != 1 else ''}"
+            if hours_label.is_integer()
+            else f"{hours_label:.1f} hours"
+        )
+        label_suffix = f" on {booking_day_label}" if booking_day_label else ""
         errors.append(
             {
                 "field": "duration_minutes",
-                "message": f"Minimum session length is {MINIMUM_APPOINTMENT_DURATION_MINUTES // 60} hour.",
+                "message": f"Minimum session length{label_suffix} is {duration_desc}.",
             }
         )
     if duration_minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
         errors.append({"field": "duration_minutes", "message": "Duration must use whole-hour increments."})
 
     if scheduled_start and duration_minutes and not errors:
-        available_slots, _window = build_available_slots(scheduled_start.date(), duration_minutes)
+        available_slots, _window = build_available_slots(
+            scheduled_start.date(),
+            duration_minutes,
+            minimum_duration_minutes=booking_minimum_duration,
+            hours_map=booking_hours_map,
+        )
         slot_available = any(
             abs(int((slot["start"] - scheduled_start).total_seconds())) < 60 for slot in available_slots
         )
@@ -3287,6 +3428,16 @@ def admin_update_appointment(appointment_id):
         else:
             new_start = None
 
+    reference_start = new_start if new_start is not None else appointment.scheduled_start
+    schedule_hours_map = None
+    schedule_minimum_duration = MINIMUM_APPOINTMENT_DURATION_MINUTES
+    schedule_day_label = None
+    if reference_start:
+        schedule_hours_map = fetch_working_hours_map()
+        schedule_weekday = reference_start.date().weekday()
+        schedule_minimum_duration = _minimum_duration_for_weekday(schedule_weekday, hours_map=schedule_hours_map)
+        schedule_day_label = INDEX_TO_DAY.get(schedule_weekday, "this day").capitalize()
+
     if "duration_minutes" in payload:
         duration = payload.get("duration_minutes")
         if duration is None:
@@ -3296,10 +3447,16 @@ def admin_update_appointment(appointment_id):
                 new_duration = int(duration)
             except (TypeError, ValueError):
                 return jsonify({"error": "Duration must be an integer."}), 400
-            if new_duration < MINIMUM_APPOINTMENT_DURATION_MINUTES:
+            if new_duration < schedule_minimum_duration:
+                hours_value = schedule_minimum_duration / 60
+                duration_desc = (
+                    f"{int(hours_value)} hour{'s' if hours_value != 1 else ''}"
+                    if hours_value.is_integer()
+                    else f"{hours_value:.1f} hours"
+                )
                 return jsonify(
                     {
-                        "error": f"Minimum session length is {MINIMUM_APPOINTMENT_DURATION_MINUTES // 60} hour.",
+                        "error": f"Minimum session length on {schedule_day_label or 'this day'} is {duration_desc}."
                     }
                 ), 400
             if new_duration % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
@@ -3347,6 +3504,8 @@ def admin_update_appointment(appointment_id):
             new_start.date(),
             new_duration,
             ignore_appointment_id=appointment.id,
+            minimum_duration_minutes=schedule_minimum_duration,
+            hours_map=schedule_hours_map,
         )
         slot_available = any(abs(int((slot["start"] - new_start).total_seconds())) < 60 for slot in available_slots)
         if not slot_available:

@@ -454,6 +454,7 @@ class StudioWorkingHour(TimestampMixin, db.Model):
     is_open = db.Column(db.Boolean, default=True, nullable=False)
     opens_at = db.Column(db.Time, nullable=False)
     closes_at = db.Column(db.Time, nullable=False)
+    minimum_duration_minutes = db.Column(db.Integer, default=60, nullable=False)
 
 
 class StudioClosure(TimestampMixin, db.Model):

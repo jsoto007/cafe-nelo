@@ -143,6 +143,14 @@ function alignDurationInput(value) {
   return String(aligned);
 }
 
+function ensureMinimumDurationMinutes(value) {
+  const minutes = Number(value);
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return SLOT_INTERVAL_MINUTES;
+  }
+  return Math.max(SLOT_INTERVAL_MINUTES, Math.ceil(minutes / SLOT_INTERVAL_MINUTES) * SLOT_INTERVAL_MINUTES);
+}
+
 function normaliseOperatingHours(hours) {
   const incoming = new Map();
   ensureArray(hours).forEach((entry) => {
@@ -151,7 +159,8 @@ function normaliseOperatingHours(hours) {
         day: entry.day,
         is_open: Boolean(entry.is_open),
         open_time: entry.open_time || '10:00',
-        close_time: entry.close_time || '18:00'
+        close_time: entry.close_time || '18:00',
+        minimum_duration_minutes: ensureMinimumDurationMinutes(entry.minimum_duration_minutes),
       });
     }
   });
@@ -169,7 +178,8 @@ function normaliseOperatingHours(hours) {
       day,
       is_open: defaults.is_open ?? true,
       open_time: defaults.open_time,
-      close_time: defaults.close_time
+      close_time: defaults.close_time,
+      minimum_duration_minutes: SLOT_INTERVAL_MINUTES,
     };
   });
 }
@@ -1061,53 +1071,82 @@ export default function AdminCalendar() {
               Operating hours
             </h3>
             <div className="space-y-3">
-              {hoursDraft.map((entry) => (
-                <div
-                  key={entry.day}
-                  className="flex flex-wrap items-center gap-3 rounded-3xl bg-gray-50 p-4 dark:bg-gray-900"
-                >
-                  <div className="flex items-center gap-2">
-                    <input
-                      id={`hours-${entry.day}`}
-                      type="checkbox"
-                      checked={entry.is_open}
-                      onChange={(event) => handleHoursDraftChange(entry.day, 'is_open', event.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-950 dark:focus:ring-gray-100"
-                    />
-                    <label
-                      htmlFor={`hours-${entry.day}`}
-                      className="text-sm font-semibold text-gray-800 dark:text-gray-100"
-                    >
-                      {WEEK_LABELS[entry.day]}
-                    </label>
+              {hoursDraft.map((entry) => {
+                const minimumHours = Math.max(
+                  entry.minimum_duration_minutes ?? SLOT_INTERVAL_MINUTES,
+                  SLOT_INTERVAL_MINUTES
+                ) / 60;
+                return (
+                  <div
+                    key={entry.day}
+                    className="flex flex-wrap items-center gap-3 rounded-3xl bg-gray-50 p-4 dark:bg-gray-900"
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        id={`hours-${entry.day}`}
+                        type="checkbox"
+                        checked={entry.is_open}
+                        onChange={(event) => handleHoursDraftChange(entry.day, 'is_open', event.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-950 dark:focus:ring-gray-100"
+                      />
+                      <label
+                        htmlFor={`hours-${entry.day}`}
+                        className="text-sm font-semibold text-gray-800 dark:text-gray-100"
+                      >
+                        {WEEK_LABELS[entry.day]}
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor={`open-${entry.day}`} className="sr-only">
+                        {WEEK_LABELS[entry.day]} open time
+                      </label>
+                      <input
+                        id={`open-${entry.day}`}
+                        type="time"
+                        value={entry.open_time}
+                        onChange={(event) => handleHoursDraftChange(entry.day, 'open_time', event.target.value)}
+                        disabled={!entry.is_open}
+                        className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+                      />
+                      <span className="text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">to</span>
+                      <label htmlFor={`close-${entry.day}`} className="sr-only">
+                        {WEEK_LABELS[entry.day]} close time
+                      </label>
+                      <input
+                        id={`close-${entry.day}`}
+                        type="time"
+                        value={entry.close_time}
+                        onChange={(event) => handleHoursDraftChange(entry.day, 'close_time', event.target.value)}
+                        disabled={!entry.is_open}
+                        className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label
+                        htmlFor={`minimum-${entry.day}`}
+                        className="text-xs tracking-[0.3em] text-gray-500 dark:text-gray-400"
+                      >
+                        Min booking (hrs)
+                      </label>
+                      <input
+                        id={`minimum-${entry.day}`}
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={String(minimumHours)}
+                        onChange={(event) => {
+                          const parsedHours = Number(event.target.value);
+                          const normalizedHours = Number.isFinite(parsedHours) && parsedHours > 0 ? Math.ceil(parsedHours) : 1;
+                          const minutes = Math.max(SLOT_INTERVAL_MINUTES, normalizedHours * SLOT_INTERVAL_MINUTES);
+                          handleHoursDraftChange(entry.day, 'minimum_duration_minutes', minutes);
+                        }}
+                        disabled={!entry.is_open}
+                        className="w-20 rounded-xl border border-gray-200 bg-white px-3 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label htmlFor={`open-${entry.day}`} className="sr-only">
-                      {WEEK_LABELS[entry.day]} open time
-                    </label>
-                    <input
-                      id={`open-${entry.day}`}
-                      type="time"
-                      value={entry.open_time}
-                      onChange={(event) => handleHoursDraftChange(entry.day, 'open_time', event.target.value)}
-                      disabled={!entry.is_open}
-                      className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
-                    />
-                    <span className="text-xs uppercase tracking-[0.3em] text-gray-400 dark:text-gray-500">to</span>
-                    <label htmlFor={`close-${entry.day}`} className="sr-only">
-                      {WEEK_LABELS[entry.day]} close time
-                    </label>
-                    <input
-                      id={`close-${entry.day}`}
-                      type="time"
-                      value={entry.close_time}
-                      onChange={(event) => handleHoursDraftChange(entry.day, 'close_time', event.target.value)}
-                      disabled={!entry.is_open}
-                      className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
           <section className="space-y-4">
