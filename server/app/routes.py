@@ -11,10 +11,14 @@ from uuid import uuid4
 import boto3
 import requests
 from botocore.exceptions import BotoCoreError, ClientError
+from PIL import Image, UnidentifiedImageError
 from flask import Blueprint, current_app, g, jsonify, request, send_from_directory, session
+from flask_limiter.errors import RateLimitExceeded
+from flask_limiter.util import get_remote_address
 from sqlalchemy import case, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from .config import db
@@ -112,8 +116,10 @@ BOOKING_FEE_SETTING_KEY = "booking_fee_percent"
 DEFAULT_BOOKING_FEE_PERCENT = 20
 MINIMUM_BOOKING_FEE_PERCENT = 20
 
-ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp", "heic", "heif"}
+ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ALLOWED_UPLOAD_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | {"pdf", "txt", "doc", "docx"}
+UPLOAD_RATE_LIMIT_MESSAGE = "Too many uploads. Please wait a moment and try again."
 
 DAY_TO_INDEX = {day: index for index, day in enumerate(WEEK_DAYS)}
 INDEX_TO_DAY = {index: day for day, index in DAY_TO_INDEX.items()}
@@ -173,9 +179,14 @@ def _build_s3_key(filename: str) -> str:
     return filename
 
 
-def _store_media_locally(file_storage, safe_name: str):
+def _get_upload_root() -> Path:
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
     upload_dir.mkdir(parents=True, exist_ok=True)
+    return upload_dir.resolve()
+
+
+def _store_media_locally(file_storage, safe_name: str):
+    upload_dir = _get_upload_root()
     destination = upload_dir / safe_name
     file_storage.stream.seek(0)
     file_storage.save(destination)
@@ -456,6 +467,20 @@ def user_required(fn):
             g.pop("current_user", None)
 
     return wrapper
+
+
+def _admin_upload_limit_key():
+    admin = getattr(g, "current_admin", None)
+    if admin and getattr(admin, "id", None):
+        return f"admin:{admin.id}"
+    return get_remote_address()
+
+
+def _client_upload_limit_key():
+    user = getattr(g, "current_user", None)
+    if user and getattr(user, "id", None):
+        return f"user:{user.id}"
+    return get_remote_address()
 
 
 def serialize_admin(admin):
@@ -880,10 +905,48 @@ def enforce_csrf_protection():
         return jsonify({"error": "Invalid or missing CSRF token."}), 400
 
 
-def allowed_file(filename: str) -> bool:
-    if not filename or "." not in filename:
+def allowed_file(filename: str, *, allowed_extensions: set[str] | None = None) -> bool:
+    if not filename:
         return False
-    return filename.rsplit(".", 1)[1].lower() in ALLOWED_UPLOAD_EXTENSIONS
+    base_name = Path(filename).name
+    if not base_name or "." not in base_name:
+        return False
+    extension = base_name.rsplit(".", 1)[1].lower()
+    permitted = allowed_extensions if allowed_extensions is not None else ALLOWED_UPLOAD_EXTENSIONS
+    return extension in permitted
+
+
+def is_valid_image_file(file_storage) -> bool:
+    stream = getattr(file_storage, "stream", file_storage)
+    try:
+        stream.seek(0)
+    except (AttributeError, OSError):
+        pass
+    try:
+        with Image.open(stream) as image:
+            image.verify()
+            mime = Image.MIME.get(image.format)
+            if not mime:
+                return False
+            return mime.lower() in ALLOWED_IMAGE_MIME_TYPES
+    except (UnidentifiedImageError, OSError):
+        return False
+    finally:
+        try:
+            stream.seek(0)
+        except (AttributeError, OSError):
+            pass
+
+
+@api_bp.errorhandler(RequestEntityTooLarge)
+def handle_large_upload(_: RequestEntityTooLarge):
+    return jsonify({"error": "Image is too large. Max size is 10MB."}), 413
+
+
+@api_bp.errorhandler(RateLimitExceeded)
+def handle_rate_limit(exc: RateLimitExceeded):
+    message = exc.description or UPLOAD_RATE_LIMIT_MESSAGE
+    return jsonify({"error": message}), 429
 
 
 def load_json_setting(key: str, default):
@@ -1614,15 +1677,26 @@ def auth_csrf():
 
 @api_bp.route("/api/uploads/<path:filename>", methods=["GET"])
 def serve_uploaded_file(filename):
-    upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
-    file_path = upload_dir / filename
-    if not file_path.exists() or not file_path.is_file():
+    upload_dir = _get_upload_root()
+    safe_name = secure_filename(filename)
+    if not safe_name:
         return jsonify({"error": "File not found."}), 404
-    return send_from_directory(upload_dir, filename, as_attachment=False)
+    target = upload_dir / safe_name
+    try:
+        target_resolved = target.resolve(strict=True)
+    except OSError:
+        return jsonify({"error": "File not found."}), 404
+    if target_resolved.parent != upload_dir:
+        return jsonify({"error": "File not found."}), 404
+    if not target_resolved.is_file():
+        return jsonify({"error": "File not found."}), 404
+    return send_from_directory(str(upload_dir), safe_name, as_attachment=False)
 
 
 @api_bp.route("/api/admin/uploads", methods=["POST"])
 @admin_required
+@limiter.limit("10 per minute", key_func=get_remote_address, error_message=UPLOAD_RATE_LIMIT_MESSAGE)
+@limiter.limit("60 per hour", key_func=_admin_upload_limit_key, error_message=UPLOAD_RATE_LIMIT_MESSAGE)
 def admin_upload_media():
     if "file" not in request.files:
         return jsonify({"error": "No file provided."}), 400
@@ -1631,10 +1705,15 @@ def admin_upload_media():
     if not file or file.filename == "":
         return jsonify({"error": "Empty file."}), 400
 
-    if not allowed_file(file.filename):
-        return jsonify({"error": "Unsupported file type."}), 400
+    if not allowed_file(file.filename, allowed_extensions=ALLOWED_IMAGE_EXTENSIONS):
+        return jsonify({"error": "Unsupported file type."}), 415
 
-    extension = file.filename.rsplit(".", 1)[1].lower()
+    extension = Path(file.filename).suffix.lower().lstrip('.')
+    if not extension:
+        return jsonify({"error": "Unsupported file type."}), 415
+
+    if not is_valid_image_file(file):
+        return jsonify({"error": "Unsupported file type."}), 415
     unique_name = f"{uuid4().hex}.{extension}"
     safe_name = secure_filename(unique_name)
 
@@ -1902,6 +1981,8 @@ def account_documents():
 
 @api_bp.route("/api/account/documents", methods=["POST"])
 @user_required
+@limiter.limit("10 per minute", key_func=get_remote_address, error_message=UPLOAD_RATE_LIMIT_MESSAGE)
+@limiter.limit("30 per hour", key_func=_client_upload_limit_key, error_message=UPLOAD_RATE_LIMIT_MESSAGE)
 def upload_account_document():
     user = g.current_user
 
@@ -1913,8 +1994,13 @@ def upload_account_document():
         return jsonify({"error": "Choose a file to upload."}), 400
 
     if not allowed_file(file.filename):
-        return jsonify({"error": "Unsupported file type."}), 400
+        return jsonify({"error": "Unsupported file type."}), 415
 
+    extension = Path(file.filename).suffix.lower().lstrip('.')
+    if not extension:
+        return jsonify({"error": "Unsupported file type."}), 415
+    if extension in ALLOWED_IMAGE_EXTENSIONS and not is_valid_image_file(file):
+        return jsonify({"error": "Unsupported file type."}), 415
     kind = (request.form.get("kind") or "inspiration").strip().lower()
     if kind not in {"inspiration", "document"}:
         kind = "document"
@@ -1922,7 +2008,6 @@ def upload_account_document():
     title = (request.form.get("title") or "").strip() or None
     notes = (request.form.get("notes") or "").strip() or None
 
-    extension = file.filename.rsplit(".", 1)[1].lower()
     unique_name = f"{uuid4().hex}.{extension}"
     safe_name = secure_filename(unique_name)
 

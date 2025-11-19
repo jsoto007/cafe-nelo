@@ -7,6 +7,11 @@ import SectionTitle from '../../components/SectionTitle.jsx';
 import { apiDelete, apiPatch, apiUpload, resolveApiUrl } from '../../lib/api.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useClientPortal } from '../../contexts/ClientPortalContext.jsx';
+import {
+  getClientSideUploadError,
+  getUploadErrorMessage,
+  validateImageBeforeUpload
+} from '../../lib/uploadValidation.js';
 
 const PREFERENCE_CONFIG = [
   {
@@ -193,8 +198,7 @@ export default function ClientProfilePage() {
   };
 
   const createFileEntries = (files) => {
-    const limited = files.slice(0, 6);
-    return limited.map((file) => {
+    return files.map((file) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       return {
         id,
@@ -209,13 +213,33 @@ export default function ClientProfilePage() {
     if (!files.length) {
       return;
     }
-    const nextFiles = createFileEntries(files);
+    const limitedFiles = files.slice(0, 6);
+    const validFiles = [];
+    let validationReason = null;
+
+    limitedFiles.forEach((file) => {
+      const validation = validateImageBeforeUpload(file);
+      if (validation.isValid) {
+        validFiles.push(file);
+        return;
+      }
+      if (!validationReason) {
+        validationReason = validation.reason;
+      }
+    });
+
+    if (!validFiles.length) {
+      setUploadError(getClientSideUploadError(validationReason));
+      return;
+    }
+
+    setUploadError(validationReason ? getClientSideUploadError(validationReason) : null);
+    const nextFiles = createFileEntries(validFiles);
     setInspirationFiles((prev) => {
       prev.forEach((entry) => entry.previewUrl && URL.revokeObjectURL(entry.previewUrl));
       return nextFiles;
     });
     setNotes('');
-    setUploadError(null);
     setUploadMessage(null);
   };
 
@@ -248,6 +272,13 @@ export default function ClientProfilePage() {
       setUploadError('Add at least one file before uploading.');
       return;
     }
+    for (const entry of inspirationFiles) {
+      const validation = validateImageBeforeUpload(entry.file);
+      if (!validation.isValid) {
+        setUploadError(getClientSideUploadError(validation.reason));
+        return;
+      }
+    }
     setIsUploading(true);
     setUploadError(null);
     setUploadMessage(null);
@@ -271,7 +302,8 @@ export default function ClientProfilePage() {
       });
       refresh();
     } catch (err) {
-      setUploadError(err?.message || 'Unable to upload inspiration right now.');
+      const message = getUploadErrorMessage(err) ?? 'Unable to upload inspiration right now.';
+      setUploadError(message);
     } finally {
       setIsUploading(false);
     }
@@ -490,7 +522,7 @@ export default function ClientProfilePage() {
                 type="file"
                 id="inspiration-upload"
                 multiple
-                accept="image/png,image/jpeg,image/jpg,image/heic,image/heif,image/webp,pdf,txt,doc,docx"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
                 onChange={handleFileChange}
                 className="sr-only"
               />
@@ -504,7 +536,7 @@ export default function ClientProfilePage() {
                     <Button variant="ghost">Choose files</Button>
                   </label>
                   <p className="max-w-xs text-[0.65rem] text-gray-500 dark:text-gray-300">
-                    Drop PNG / JPEG / WebP / PDF / DOC / TXT here (max 6 files).
+                    Drop PNG / JPEG / WebP here (max 6 files).
                   </p>
                 </div>
                 <p className="mt-3 text-[0.6rem] text-gray-500 dark:text-gray-400">

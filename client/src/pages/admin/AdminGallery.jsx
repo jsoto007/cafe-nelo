@@ -5,6 +5,11 @@ import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import SectionTitle from '../../components/SectionTitle.jsx';
 import { resolveApiUrl } from '../../lib/api.js';
 import { useAdminDashboard } from './AdminDashboardContext.jsx';
+import {
+  getClientSideUploadError,
+  getUploadErrorMessage,
+  validateImageBeforeUpload
+} from '../../lib/uploadValidation.js';
 
 const INITIAL_CATEGORY = { name: '', description: '', is_active: true };
 const INITIAL_GALLERY_DRAFT = {
@@ -56,6 +61,7 @@ export default function AdminGallery() {
   const [newItemDraft, setNewItemDraft] = useState(INITIAL_GALLERY_DRAFT);
   const [confirmation, setConfirmation] = useState(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   useEffect(() => {
     const drafts = {};
@@ -144,9 +150,16 @@ export default function AdminGallery() {
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) {
       return;
     }
+    const validation = validateImageBeforeUpload(file);
+    if (!validation.isValid) {
+      setUploadError(getClientSideUploadError(validation.reason));
+      return;
+    }
+    setUploadError(null);
     setNewItemDraft((prev) => {
       if (prev.previewUrl) {
         URL.revokeObjectURL(prev.previewUrl);
@@ -160,6 +173,7 @@ export default function AdminGallery() {
   };
 
   const resetNewItemDraft = () => {
+    setUploadError(null);
     setNewItemDraft((prev) => {
       if (prev.previewUrl) {
         URL.revokeObjectURL(prev.previewUrl);
@@ -218,6 +232,14 @@ export default function AdminGallery() {
       setFeedback({ tone: 'offline', message: 'Select an image before previewing.' });
       return;
     }
+    const validation = validateImageBeforeUpload(newItemDraft.file);
+    if (!validation.isValid) {
+      const message = getClientSideUploadError(validation.reason);
+      setUploadError(message);
+      setFeedback({ tone: 'offline', message });
+      return;
+    }
+    setUploadError(null);
     if (!newItemDraft.label.trim()) {
       setFeedback({ tone: 'offline', message: 'Provide alt text for accessibility.' });
       return;
@@ -299,17 +321,20 @@ export default function AdminGallery() {
       }
       setConfirmation(null);
     } catch (err) {
-      setFeedback({
-        tone: 'offline',
-        message:
-          confirmation.type === 'publish'
-            ? 'Unable to publish gallery item.'
-            : confirmation.type === 'update-gallery'
-            ? 'Unable to update gallery item.'
-            : confirmation.type === 'delete-gallery'
-            ? 'Unable to delete gallery item.'
-            : 'Unable to delete category.'
-      });
+      const uploadMessage = getUploadErrorMessage(err);
+      const fallbackMessage =
+        confirmation.type === 'publish'
+          ? 'Unable to publish gallery item.'
+          : confirmation.type === 'update-gallery'
+          ? 'Unable to update gallery item.'
+          : confirmation.type === 'delete-gallery'
+          ? 'Unable to delete gallery item.'
+          : 'Unable to delete category.';
+      const finalMessage = uploadMessage || fallbackMessage;
+      setFeedback({ tone: 'offline', message: finalMessage });
+      if (uploadMessage) {
+        setUploadError(uploadMessage);
+      }
     } finally {
       setConfirmBusy(false);
     }
@@ -489,6 +514,9 @@ export default function AdminGallery() {
                 onChange={handleFileChange}
                 className="mt-2 block w-full text-sm text-gray-700 file:mr-4 file:rounded-full file:border-0 file:bg-gray-900 file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-[0.3em] file:text-white hover:file:bg-gray-800 dark:text-gray-200 dark:file:bg-gray-100 dark:file:text-gray-900 dark:hover:file:bg-gray-200"
               />
+              {uploadError ? (
+                <p className="mt-2 text-xs uppercase tracking-[0.3em] text-rose-600 dark:text-rose-400">{uploadError}</p>
+              ) : null}
               {newItemDraft.previewUrl ? (
                 <img
                   src={newItemDraft.previewUrl}
@@ -580,7 +608,9 @@ export default function AdminGallery() {
             onChange={(event) => handleNewItemDraftChange('caption', event.target.value)}
             className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
           />
-          <Button type="submit">Preview upload</Button>
+          <Button type="submit" disabled={confirmBusy}>
+            {confirmBusy ? 'Uploading…' : 'Preview upload'}
+          </Button>
         </form>
       </Card>
 
@@ -729,7 +759,9 @@ export default function AdminGallery() {
         title={confirmation?.title ?? 'Confirm'}
         description={confirmation?.description ?? ''}
         confirmLabel={
-          confirmation?.type === 'delete-gallery' || confirmation?.type === 'delete-category'
+          confirmBusy
+            ? 'Uploading…'
+            : confirmation?.type === 'delete-gallery' || confirmation?.type === 'delete-category'
             ? 'Delete'
             : confirmation?.type === 'publish'
             ? 'Publish'

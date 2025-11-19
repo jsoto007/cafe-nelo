@@ -172,17 +172,25 @@ export async function apiUpload(path, formData, { signal } = {}) {
     headers: uploadHeaders
   });
 
+  let payload = null;
+  if (response.status !== 204) {
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+  }
+
   if (!response.ok) {
-    const error = new Error(`Request failed with status ${response.status}`);
+    const detail =
+      payload?.error || (payload?.errors && payload.errors.length ? payload.errors[0]?.message : null);
+    const error = new Error(detail || `Request failed with status ${response.status}`);
     error.status = response.status;
+    error.body = payload;
     throw error;
   }
 
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
+  return payload;
 }
 
 export async function withFallback(fetcher, fallbackValue) {
