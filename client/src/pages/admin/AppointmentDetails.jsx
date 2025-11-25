@@ -208,10 +208,6 @@ export default function AppointmentDetails() {
   const imageInputRef = useRef(null);
   const attachmentInputRef = useRef(null);
   const [activePreviewAssetId, setActivePreviewAssetId] = useState(null);
-  const appointmentDetailPath = useMemo(
-    () => `/dashboard/admin/calendar/${appointment?.id || appointmentNumericId || ''}`,
-    [appointment?.id, appointmentNumericId]
-  );
 
   const reloadAppointment = useCallback(async ({ showLoader = false } = {}) => {
     if (!appointmentNumericId) {
@@ -369,7 +365,6 @@ export default function AppointmentDetails() {
     const params = new URLSearchParams(location.search);
     const assetIdParam = params.get('assetId');
     if (!assetIdParam) {
-      setActivePreviewAssetId(null);
       return;
     }
     const match = previewableAssets.find((asset) => String(asset.id) === String(assetIdParam));
@@ -385,30 +380,22 @@ export default function AppointmentDetails() {
     return previewableAssets.find((asset) => String(asset.id) === String(activePreviewAssetId)) || previewableAssets[0];
   }, [activePreviewAssetId, previewableAssets]);
 
-  const updatePreviewUrl = useCallback(
-    (assetId) => {
-      if (!appointmentDetailPath) {
-        return;
-      }
-      const search = assetId ? `?assetId=${assetId}` : '';
-      navigate(`${appointmentDetailPath}${search}`, { replace: true });
-    },
-    [appointmentDetailPath, navigate]
-  );
 
-  const handleOpenPreview = (assetId) => {
+  const handleOpenPreview = (assetId, event) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     if (!previewableAssets.length) {
       return;
     }
     const match = previewableAssets.find((asset) => String(asset.id) === String(assetId));
     const targetId = (match || previewableAssets[0]).id;
     setActivePreviewAssetId(targetId);
-    updatePreviewUrl(targetId);
   };
 
   const handleClosePreview = () => {
     setActivePreviewAssetId(null);
-    updatePreviewUrl(null);
   };
 
   const handlePreviewNav = (direction) => {
@@ -425,7 +412,6 @@ export default function AppointmentDetails() {
         : (currentIndex - 1 + previewableAssets.length) % previewableAssets.length;
     const nextId = previewableAssets[nextIndex].id;
     setActivePreviewAssetId(nextId);
-    updatePreviewUrl(nextId);
   };
 
   const handleTriggerImageUpload = () => {
@@ -576,7 +562,7 @@ export default function AppointmentDetails() {
                     value={appointment.status || STATUS_OPTIONS[0].value}
                     onChange={handleStatusChange}
                     disabled={statusUpdating}
-                    className="rounded-full border border-gray-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-800 transition focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+                    className="rounded-full border border-gray-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-800 transition focus:border-gray-900 focus:outline-none focus:ring-0 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
                   >
                     {appointmentStatusOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -726,7 +712,7 @@ export default function AppointmentDetails() {
             className="sr-only"
             onChange={handleImageUpload}
           />
-          <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm ring-1 ring-gray-50 dark:border-gray-800 dark:bg-gray-900/60 dark:ring-0 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm ring-1 ring-gray-50 dark:bg-gray-900/60 dark:ring-0 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-500 dark:text-gray-400">Assets</p>
               <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -759,7 +745,7 @@ export default function AppointmentDetails() {
                     <button
                       type="button"
                       key={`preview-${asset.id}`}
-                      onClick={() => handleOpenPreview(asset.id)}
+                      onClick={(event) => handleOpenPreview(asset.id, event)}
                       className="group relative overflow-hidden rounded-2xl bg-gradient-to-br shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div
@@ -785,7 +771,7 @@ export default function AppointmentDetails() {
                 })}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-gray-300 bg-white/60 px-4 py-5 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-white/60 px-4 py-5 text-center text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
                 No client photos uploaded yet.
               </div>
             )}
@@ -793,7 +779,7 @@ export default function AppointmentDetails() {
 
           <form
             onSubmit={handleAssetSubmit}
-            className="grid gap-4 rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm ring-1 ring-gray-50 dark:border-gray-800/80 dark:bg-gray-900/70"
+            className="grid gap-4 rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm ring-1 ring-gray-50 dark:bg-gray-900/70"
           >
             <input
               ref={attachmentInputRef}
@@ -815,7 +801,7 @@ export default function AppointmentDetails() {
                   id={ASSET_FIELD_IDS.kind}
                   value={assetDraft.kind}
                   onChange={(event) => handleAssetDraftChange('kind', event.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-inner focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-500/20"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-inner focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-500/20"
                 >
                   {assetOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -834,7 +820,7 @@ export default function AppointmentDetails() {
                     type="checkbox"
                     checked={assetDraft.is_visible_to_client}
                     onChange={(event) => handleAssetDraftChange('is_visible_to_client', event.target.checked)}
-                    className="h-4 w-4 rounded border border-gray-400 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900"
+                    className="h-4 w-4 rounded border border-gray-400 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900"
                   />
                   <label htmlFor={ASSET_FIELD_IDS.share}>Share with client</label>
                 </div>
@@ -873,7 +859,7 @@ export default function AppointmentDetails() {
                   placeholder="https://example.com/file.png"
                   value={assetDraft.file_url}
                   onChange={(event) => handleAssetDraftChange('file_url', event.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-inner focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-500/20"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-inner focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-500/20"
                 />
               </div>
             </div>
@@ -890,7 +876,7 @@ export default function AppointmentDetails() {
                 placeholder="Add note text"
                 value={assetDraft.note_text}
                 onChange={(event) => handleAssetDraftChange('note_text', event.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-inner focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-500/20"
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-inner focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-500/20"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -921,15 +907,15 @@ export default function AppointmentDetails() {
               return (
                 <div
                   key={asset.id}
-                  className="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm ring-1 ring-gray-50 transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-900/70"
+                  className="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm ring-1 ring-gray-50 transition hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-900/70"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex flex-1 flex-wrap items-start gap-4">
                       {hasFile ? (
                         <button
                           type="button"
-                          onClick={() => handleOpenPreview(asset.id)}
-                          className="group relative flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:border-gray-700/80 dark:bg-gray-900"
+                          onClick={(event) => handleOpenPreview(asset.id, event)}
+                          className="group relative flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-gray-900"
                           aria-label={`Open ${kindLabel} viewer`}
                         >
                           {isImagePreview ? (
@@ -996,7 +982,7 @@ export default function AppointmentDetails() {
               );
             })}
             {!appointment.assets?.length ? (
-              <div className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              <div className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500 dark:text-gray-400">
                 No assets linked to this appointment yet.
               </div>
             ) : null}
@@ -1030,7 +1016,7 @@ export default function AppointmentDetails() {
                     const isPdf = currentUrl && isPdfUrl(currentUrl);
                     if (isImage) {
                       return (
-                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 dark:bg-gray-900">
                           <img
                             src={currentUrl}
                             alt={`${current.kind || 'Asset'} preview`}
@@ -1041,7 +1027,7 @@ export default function AppointmentDetails() {
                     }
                     if (isPdf) {
                       return (
-                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 dark:bg-gray-900">
                           <iframe
                             title={`${current.kind || 'Asset'} document`}
                             src={currentUrl}
@@ -1051,7 +1037,7 @@ export default function AppointmentDetails() {
                       );
                     }
                     return (
-                      <div className="flex h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                      <div className="flex h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-center text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
                         <p className="text-base font-semibold uppercase">{getFileExtension(currentUrl) || 'File'}</p>
                         <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
                           Preview not available
@@ -1105,7 +1091,7 @@ export default function AppointmentDetails() {
                       className={`flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl border text-xs uppercase transition ${
                         isActive
                           ? 'border-gray-900 ring-2 ring-gray-900 dark:border-gray-100 dark:ring-gray-100'
-                          : 'border-gray-200 dark:border-gray-800'
+                          : 'border-gray-200'
                       }`}
                       aria-label={`Open ${asset.kind || 'asset'} preview`}
                     >
