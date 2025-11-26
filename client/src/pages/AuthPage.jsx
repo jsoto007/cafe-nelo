@@ -110,7 +110,7 @@ export default function AuthPage() {
       const redirect = response?.redirect_to || '/portal/dashboard';
       setRegisterForm(INITIAL_REGISTER);
       setLoginForm(INITIAL_LOGIN);
-      setNotice('Account created successfully – redirecting to your dashboard.');
+      setNotice('Account created – check your email for a verification code. Redirecting to your dashboard.');
       await refreshSession();
       navigate(redirect, { replace: true });
     } catch (err) {
@@ -367,9 +367,17 @@ export default function AuthPage() {
                     required
                   />
                 </div>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Signing in...' : 'Sign in'}
-                </Button>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? 'Signing in...' : 'Sign in'}
+                  </Button>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs uppercase tracking-[0.3em] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-100"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </form>
             )}
         <div className="flex flex-wrap items-center justify-between gap-4">

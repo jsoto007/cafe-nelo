@@ -5,6 +5,9 @@ import ScrollRestoration from './components/ScrollRestoration.jsx';
 import Landing from './pages/Landing.jsx';
 import ActivateAccount from './pages/ActivateAccount.jsx';
 import AuthPage from './pages/AuthPage.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
+import VerifyEmail from './pages/VerifyEmail.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import ClientPortalLayout from './pages/portal/ClientPortalLayout.jsx';
 import ClientDashboardPage from './pages/portal/ClientDashboardPage.jsx';
@@ -40,6 +43,9 @@ export default function App() {
         </Route>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/activate-account" element={<ActivateAccount />} />
         <Route path="/share-your-idea" element={<ShareYourIdea />} />
         <Route path="/booking/confirmation" element={<BookingConfirmation />} />

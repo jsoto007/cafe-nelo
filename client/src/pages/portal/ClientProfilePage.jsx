@@ -4,7 +4,7 @@ import Button from '../../components/Button.jsx';
 import Card from '../../components/Card.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import SectionTitle from '../../components/SectionTitle.jsx';
-import { apiDelete, apiPatch, apiUpload, resolveApiUrl } from '../../lib/api.js';
+import { apiDelete, apiPatch, apiPost, apiUpload, resolveApiUrl } from '../../lib/api.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useClientPortal } from '../../contexts/ClientPortalContext.jsx';
 import {
@@ -124,6 +124,19 @@ export default function ClientProfilePage() {
   const [prefError, setPrefError] = useState(null);
   const [prefSaving, setPrefSaving] = useState(false);
 
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
+  const [passwordStatus, setPasswordStatus] = useState(null);
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [verificationError, setVerificationError] = useState(null);
+  const [sendingVerification, setSendingVerification] = useState(false);
+
   const [isInspirationOpen, setIsInspirationOpen] = useState(false);
   const [inspirationFiles, setInspirationFiles] = useState([]);
   const [notes, setNotes] = useState('');
@@ -217,6 +230,56 @@ export default function ClientProfilePage() {
       setPreferences((prev) => ({ ...prev, [key]: !value }));
     } finally {
       setPrefSaving(false);
+    }
+  };
+
+  const handlePasswordChange = (field) => (event) => {
+    setPasswordForm((prev) => ({ ...prev, [field]: event.target.value }));
+    setPasswordStatus(null);
+    setPasswordError(null);
+  };
+
+  const handlePasswordSubmit = async (event) => {
+    event.preventDefault();
+    setPasswordSaving(true);
+    setPasswordStatus(null);
+    setPasswordError(null);
+
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setPasswordError('New password and confirmation must match.');
+      setPasswordSaving(false);
+      return;
+    }
+
+    try {
+      await apiPost('/api/account/password', {
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password
+      });
+      setPasswordStatus('Password updated.');
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      refresh();
+    } catch (err) {
+      setPasswordError(err?.body?.error || 'Unable to update password right now.');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handleSendVerification = async () => {
+    if (!profile?.email) {
+      return;
+    }
+    setSendingVerification(true);
+    setVerificationStatus(null);
+    setVerificationError(null);
+    try {
+      const response = await apiPost('/api/auth/email/verify-request', { email: profile.email });
+      setVerificationStatus(response?.status === 'already_verified' ? 'Email already verified.' : 'Verification email sent.');
+    } catch (err) {
+      setVerificationError(err?.body?.error || 'Unable to send verification email.');
+    } finally {
+      setSendingVerification(false);
     }
   };
 
@@ -370,6 +433,8 @@ export default function ClientProfilePage() {
   const initials = `${profile?.first_name?.[0] ?? ''}${profile?.last_name?.[0] ?? ''}`.trim().toUpperCase() || 'YO';
   const memberSince = formatDate(profile?.created_at);
   const lastLogin = formatDate(profile?.last_login_at);
+  const lastPasswordChange = formatDate(profile?.last_password_change_at);
+  const emailVerified = !!profile?.email_verified;
 
   const focusInspirationUpload = () => {
     setIsInspirationOpen(true);
@@ -532,6 +597,97 @@ export default function ClientProfilePage() {
             </div>
           </dl>
         )}
+      </Card>
+
+      <Card className="space-y-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Security</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Verify your email and keep your password fresh.</p>
+          </div>
+          {passwordStatus ? (
+            <p className="text-xs uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">{passwordStatus}</p>
+          ) : null}
+          {passwordError ? (
+            <p className="text-xs uppercase tracking-[0.3em] text-rose-600 dark:text-rose-300">{passwordError}</p>
+          ) : null}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200 dark:bg-gray-950/70 dark:ring-gray-800">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Email verification</p>
+            <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+              {emailVerified ? 'Email verified.' : 'Verify your email to enable password recovery and reminders.'}
+            </p>
+            <p className="mt-2 text-[0.7rem] uppercase tracking-[0.25em] text-gray-500 dark:text-gray-400">
+              Last password change: {lastPasswordChange}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button type="button" variant={emailVerified ? 'secondary' : 'primary'} onClick={handleSendVerification} disabled={sendingVerification || !profile?.email}>
+                {sendingVerification ? 'Sending…' : emailVerified ? 'Resend code' : 'Send verification email'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  navigate(
+                    `/verify-email${profile?.email ? `?email=${encodeURIComponent(profile.email)}` : ''}`
+                  )
+                }
+              >
+                Enter code
+              </Button>
+            </div>
+            {verificationStatus ? (
+              <p className="mt-3 text-xs uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400">{verificationStatus}</p>
+            ) : null}
+            {verificationError ? (
+              <p className="mt-3 text-xs uppercase tracking-[0.3em] text-rose-600 dark:text-rose-300">{verificationError}</p>
+            ) : null}
+          </div>
+          <form className="space-y-3 rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200 dark:bg-gray-950/70 dark:ring-gray-800" onSubmit={handlePasswordSubmit}>
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Update password</p>
+            <label className="flex flex-col gap-2">
+              <span className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Current password</span>
+              <input
+                type="password"
+                value={passwordForm.current_password}
+                onChange={handlePasswordChange('current_password')}
+                className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none transition focus:border-black dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">New password</span>
+              <input
+                type="password"
+                value={passwordForm.new_password}
+                onChange={handlePasswordChange('new_password')}
+                className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none transition focus:border-black dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                required
+                minLength={8}
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Confirm password</span>
+              <input
+                type="password"
+                value={passwordForm.confirm_password}
+                onChange={handlePasswordChange('confirm_password')}
+                className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none transition focus:border-black dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                required
+                minLength={8}
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit" disabled={passwordSaving}>
+                {passwordSaving ? 'Saving…' : 'Update password'}
+              </Button>
+              <p className="text-[0.65rem] uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                Minimum 8 characters.
+              </p>
+            </div>
+          </form>
+        </div>
       </Card>
 
       <Card ref={documentsRef} className="space-y-4">

@@ -73,6 +73,8 @@ class ClientAccount(TimestampMixin, db.Model):
     is_guest = db.Column(db.Boolean, default=False, nullable=False)
     role = db.Column(db.String(20), default="user", nullable=False)
     last_login_at = db.Column(db.DateTime)
+    email_verified_at = db.Column(db.DateTime)
+    last_password_change_at = db.Column(db.DateTime)
 
     appointments = db.relationship(
         "TattooAppointment",
@@ -102,14 +104,30 @@ class ClientAccount(TimestampMixin, db.Model):
         cascade="all, delete-orphan",
         lazy="dynamic",
     )
+    email_verification_tokens = db.relationship(
+        "EmailVerificationToken",
+        back_populates="client_account",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+    password_reset_requests = db.relationship(
+        "PasswordResetRequest",
+        back_populates="client_account",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
 
     def set_password(self, raw_password: str) -> None:
         self.password_hash = generate_password_hash(raw_password)
+        self.last_password_change_at = datetime.utcnow()
 
     def check_password(self, raw_password: str) -> bool:
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, raw_password)
+
+    def mark_email_verified(self) -> None:
+        self.email_verified_at = datetime.utcnow()
 
     @property
     def display_name(self) -> str:
@@ -165,6 +183,64 @@ class AccountActivationToken(TimestampMixin, db.Model):
     used_at = db.Column(db.DateTime)
 
     client_account = db.relationship("ClientAccount", back_populates="activation_tokens")
+
+
+class EmailVerificationToken(TimestampMixin, db.Model):
+    __tablename__ = "email_verification_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_account_id = db.Column(
+        db.Integer,
+        db.ForeignKey("client_accounts.id"),
+        nullable=False,
+        index=True,
+    )
+    email = db.Column(db.String(255), nullable=False)
+    purpose = db.Column(db.String(32), nullable=False, default="verify_email")
+    code_hash = db.Column(db.String(255), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    consumed_at = db.Column(db.DateTime)
+
+    client_account = db.relationship("ClientAccount", back_populates="email_verification_tokens")
+
+    def is_expired(self, now=None) -> bool:
+        now = now or datetime.utcnow()
+        return self.expires_at <= now
+
+    def is_consumed(self) -> bool:
+        return self.consumed_at is not None
+
+    def mark_consumed(self, when=None) -> None:
+        self.consumed_at = when or datetime.utcnow()
+
+
+class PasswordResetRequest(TimestampMixin, db.Model):
+    __tablename__ = "password_reset_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_account_id = db.Column(
+        db.Integer,
+        db.ForeignKey("client_accounts.id"),
+        nullable=False,
+        index=True,
+    )
+    code_hash = db.Column(db.String(255), nullable=False)
+    requested_ip = db.Column(db.String(45))
+    requested_user_agent = db.Column(db.String(255))
+    expires_at = db.Column(db.DateTime, nullable=False)
+    consumed_at = db.Column(db.DateTime)
+
+    client_account = db.relationship("ClientAccount", back_populates="password_reset_requests")
+
+    def is_expired(self, now=None) -> bool:
+        now = now or datetime.utcnow()
+        return self.expires_at <= now
+
+    def is_consumed(self) -> bool:
+        return self.consumed_at is not None
+
+    def mark_consumed(self, when=None) -> None:
+        self.consumed_at = when or datetime.utcnow()
 
 
 class TattooCategory(TimestampMixin, db.Model):
