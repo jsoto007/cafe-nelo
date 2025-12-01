@@ -29,9 +29,7 @@ export default function Booking() {
         <Card className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="space-y-3">
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Booking requests now include secure document intake so we can prepare custom design time and confirm age
-              requirements before meeting. Files are encrypted at rest and visible only to our team unless you toggle
-              otherwise.
+            Bookings include secure document upload for design prep and age checks. Files are encrypted and private.
             </p>
             <ul className="space-y-1">{requirementList}</ul>
           </div>

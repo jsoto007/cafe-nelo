@@ -1,6 +1,6 @@
 export const BOOKING_REQUIREMENTS = [
-  'Upload a clear front photo of your government-issued ID (returning clients can skip once verified).',
-  'Share inspiration imagery (up to three files) or include a written description.',
-  'Pick a preferred date and one-hour slot using the live studio calendar.',
-  'Secure your time with a fully refundable Square deposit.'
+  'Upload a clear photo of your ID for age verification.',
+  'Submit inspiration images or a short description.',
+  'Choose a date and time appointment time.',
+  'Pay the deposit to secure your spot.'
 ];
