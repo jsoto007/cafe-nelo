@@ -5834,8 +5834,25 @@ def seed_real_appointments(admin):
         return False
 
     created_any = False
+    skipped_incomplete = 0
+    skipped_invalid = 0
 
     for data in REAL_APPOINTMENTS:
+        start_str = (data.get("start") or "").strip()
+        end_str = (data.get("end") or "").strip()
+
+        # Some leads never picked a time; skip those instead of crashing.
+        if not start_str or not end_str:
+            skipped_incomplete += 1
+            continue
+
+        try:
+            start = datetime.strptime(start_str, "%B %d, %Y %I:%M %p")
+            end = datetime.strptime(end_str, "%B %d, %Y %I:%M %p")
+        except ValueError:
+            skipped_invalid += 1
+            continue
+
         raw_email = (data.get("email") or "").strip()
         email = raw_email or f"guest-{data['appointment_id']}@placeholder.invalid"
 
@@ -5861,8 +5878,6 @@ def seed_real_appointments(admin):
             # Already imported
             continue
 
-        start = datetime.strptime(data["start"], "%B %d, %Y %I:%M %p")
-        end = datetime.strptime(data["end"], "%B %d, %Y %I:%M %p")
         duration_minutes = int((end - start).total_seconds() // 60)
 
         appointment = TattooAppointment(
@@ -5937,6 +5952,11 @@ def seed_real_appointments(admin):
         print("Seeded real appointments from embedded schedule.")
     else:
         print("No new real appointments were added from embedded schedule.")
+    if skipped_incomplete or skipped_invalid:
+        print(
+            f"Skipped {skipped_incomplete} incomplete and "
+            f"{skipped_invalid} malformed appointments without start/end times."
+        )
     return created_any
 
 
@@ -6043,6 +6063,20 @@ def ensure_session_options():
 def seed_demo_data():
     # Only wipe data if explicitly requested via environment variable.
     reset_requested = os.getenv("SEED_RESET", "").lower() == "true"
+    # Never allow destructive reset in production-like environments.
+    env_value = (
+        os.getenv("APP_ENV", "")
+        or os.getenv("FLASK_ENV", "")
+        or os.getenv("ENV", "")
+    ).lower()
+    is_prod = env_value == "production"
+    if reset_requested and is_prod:
+        print(
+            "Refusing to reset data because environment looks like production "
+            f"(ENV={env_value or 'unset'})."
+        )
+        reset_requested = False
+
     if reset_requested:
         clear_existing_data()
 

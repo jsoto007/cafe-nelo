@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button.jsx';
 import Card from '../../components/Card.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
+import Dialog from '../../components/Dialog.jsx';
 import SectionTitle from '../../components/SectionTitle.jsx';
 import { useAdminDashboard } from './AdminDashboardContext.jsx';
 
@@ -91,6 +92,80 @@ function formatClosureDate(value) {
     day: 'numeric',
     year: 'numeric'
   });
+}
+
+function formatLocalDateKey(value) {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const pad = (input) => input.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function startOfDay(source) {
+  const date = new Date(source);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function startOfWeek(source) {
+  const date = startOfDay(source);
+  if (!date) {
+    return null;
+  }
+  // Align to Monday as the first day of the week.
+  const day = date.getDay(); // Sunday = 0
+  const offset = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + offset);
+  return date;
+}
+
+function startOfMonth(source) {
+  const date = startOfDay(source);
+  if (!date) {
+    return null;
+  }
+  date.setDate(1);
+  return date;
+}
+
+function getMonthGridDays(source) {
+  const monthStart = startOfMonth(source);
+  if (!monthStart) {
+    return [];
+  }
+  const gridStart = startOfWeek(monthStart);
+  if (!gridStart) {
+    return [];
+  }
+  const days = [];
+  for (let index = 0; index < 42; index += 1) {
+    const next = new Date(gridStart);
+    next.setDate(gridStart.getDate() + index);
+    days.push(next);
+  }
+  return days;
+}
+
+function formatAppointmentTimeRange(appointment) {
+  if (!appointment?.scheduled_start) {
+    return 'Awaiting schedule';
+  }
+  const start = new Date(appointment.scheduled_start);
+  if (Number.isNaN(start.getTime())) {
+    return 'Awaiting schedule';
+  }
+  const end = new Date(start);
+  end.setMinutes(end.getMinutes() + (appointment.duration_minutes || SLOT_INTERVAL_MINUTES));
+  const timeFormat = { hour: 'numeric', minute: '2-digit' };
+  return `${start.toLocaleTimeString([], timeFormat)} – ${end.toLocaleTimeString([], timeFormat)}`;
 }
 
 function buildAppointmentUpdatePayload(draft) {
@@ -333,6 +408,40 @@ function IconClock(props) {
   );
 }
 
+function IconChevronLeft(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M15 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
+function IconChevronRight(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
 function ActionIconButton({ icon: Icon, label, onClick, tone = 'default', active = false }) {
   const toneClasses =
     tone === 'danger'
@@ -356,7 +465,7 @@ function ActionIconButton({ icon: Icon, label, onClick, tone = 'default', active
 
 export default function AdminCalendar() {
   const {
-    state: { appointments, appointmentsPagination, admins, schedule },
+    state: { appointments, appointmentsPagination, admins, schedule, loading },
     actions: {
       setFeedback,
       createAppointment,
@@ -388,6 +497,10 @@ export default function AdminCalendar() {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [appointmentSearchQuery, setAppointmentSearchQuery] = useState('');
   const [appointmentSortOption, setAppointmentSortOption] = useState('schedule-asc');
+  const [viewMode, setViewMode] = useState('month');
+  const [focusDate, setFocusDate] = useState(() => new Date());
+  const [dayModalDate, setDayModalDate] = useState(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
   useEffect(() => {
     const drafts = {};
@@ -408,6 +521,7 @@ export default function AdminCalendar() {
     () => admins.map((admin) => ({ value: String(admin.id), label: admin.name })),
     [admins]
   );
+  const isLoadingAppointments = loading && !appointments.length;
 
   const filteredAppointments = useMemo(() => {
     const query = appointmentSearchQuery.trim().toLowerCase();
@@ -494,6 +608,55 @@ export default function AdminCalendar() {
 
   const hasSearchQuery = Boolean(appointmentSearchQuery.trim());
   const totalAppointments = appointmentsPagination.total || appointments.length;
+  const todayKey = useMemo(() => formatLocalDateKey(new Date()), []);
+
+  const appointmentsByDate = useMemo(() => {
+    const map = new Map();
+    filteredAppointments.forEach((appointment) => {
+      const dateKey = formatLocalDateKey(appointment.scheduled_start);
+      if (!dateKey) {
+        return;
+      }
+      const bucket = map.get(dateKey) || [];
+      bucket.push(appointment);
+      map.set(dateKey, bucket);
+    });
+    map.forEach((bucket) => {
+      bucket.sort((a, b) => {
+        const aTime = a.scheduled_start ? new Date(a.scheduled_start).getTime() : 0;
+        const bTime = b.scheduled_start ? new Date(b.scheduled_start).getTime() : 0;
+        return aTime - bTime;
+      });
+    });
+    return map;
+  }, [filteredAppointments]);
+
+  const weekStart = useMemo(() => startOfWeek(focusDate), [focusDate]);
+  const weekDays = useMemo(() => {
+    if (!weekStart) {
+      return [];
+    }
+    return Array.from({ length: 7 }).map((_, index) => {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + index);
+      return day;
+    });
+  }, [weekStart]);
+  const monthDays = useMemo(() => getMonthGridDays(focusDate), [focusDate]);
+
+  const calendarHeadline = useMemo(() => {
+    if (viewMode === 'month') {
+      return focusDate.toLocaleDateString([], { month: 'long', year: 'numeric' });
+    }
+    if (viewMode === 'week' && weekStart) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      const startLabel = weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const endLabel = weekEnd.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return `Week of ${startLabel} – ${endLabel}`;
+    }
+    return focusDate.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+  }, [focusDate, viewMode, weekStart]);
 
   const handleAppointmentDraftChange = (appointmentId, field, value) => {
     setAppointmentDrafts((prev) => ({
@@ -779,9 +942,371 @@ export default function AdminCalendar() {
     </div>
   );
 
+  const renderLoadingState = (message = 'Loading appointments...') => (
+    <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+      <svg className="h-6 w-6 animate-spin text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none">
+        <circle className="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+        <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+      <p>{message}</p>
+    </div>
+  );
+
   const handleCreateSubmit = (event) => {
     event.preventDefault();
     requestAppointmentCreate();
+  };
+
+  const handleChangeFocus = (direction) => {
+    setFocusDate((prev) => {
+      const next = new Date(prev);
+      if (viewMode === 'day') {
+        next.setDate(prev.getDate() + direction);
+      } else if (viewMode === 'week') {
+        next.setDate(prev.getDate() + direction * 7);
+      } else {
+        next.setMonth(prev.getMonth() + direction);
+      }
+      return next;
+    });
+  };
+
+  const handleSetViewMode = (mode) => {
+    setViewMode(mode);
+    if (mode !== 'day') {
+      setDayModalDate(null);
+    }
+  };
+
+  const openDayModal = (date) => {
+    const nextDate = new Date(date);
+    if (Number.isNaN(nextDate.getTime())) {
+      return;
+    }
+    setFocusDate(nextDate);
+    setDayModalDate(nextDate);
+  };
+
+  const closeDayModal = () => {
+    setDayModalDate(null);
+  };
+
+  const handleDayModalChange = (direction) => {
+    setDayModalDate((prev) => {
+      const base = prev || focusDate || new Date();
+      const next = new Date(base);
+      next.setDate(base.getDate() + direction);
+      setFocusDate(next);
+      return next;
+    });
+  };
+
+  const setFocusDay = (date) => {
+    const nextDate = new Date(date);
+    if (Number.isNaN(nextDate.getTime())) {
+      return;
+    }
+    setFocusDate(nextDate);
+    setDayModalDate(null);
+  };
+
+  const renderAppointmentBadge = (appointment) => {
+    const clientName = appointment.client?.display_name || appointment.guest_name || 'Guest client';
+    const timeRange = formatAppointmentTimeRange(appointment);
+    const status = appointment.status || 'pending';
+    const reference = appointment.reference_code || `#${appointment.id}`;
+    return (
+      <button
+        type="button"
+        onClick={() => setSelectedAppointmentId(appointment.id)}
+        key={appointment.id}
+        className="w-full space-y-2 rounded-2xl border border-gray-200 bg-white p-3 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:hover:border-gray-700 dark:focus-visible:ring-gray-500"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{timeRange}</p>
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-600 ring-1 ring-inset ring-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-800">
+            {status}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+          <span className="font-medium">{clientName}</span>
+          <span className="text-gray-500 dark:text-gray-400">{reference}</span>
+        </div>
+      </button>
+    );
+  };
+
+  const renderDayContent = (date) => {
+    if (isLoadingAppointments) {
+      return renderLoadingState();
+    }
+
+    const dayKey = formatLocalDateKey(date);
+    const dayAppointments = dayKey ? appointmentsByDate.get(dayKey) || [] : [];
+
+    if (!dayAppointments.length) {
+      return renderEmptyState('No appointments scheduled for this day.');
+    }
+
+    return <div className="grid gap-3">{dayAppointments.map((appointment) => renderAppointmentBadge(appointment))}</div>;
+  };
+
+  const renderDayView = () => renderDayContent(focusDate);
+
+  const renderWeekView = () => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+      {weekDays.map((day) => {
+        const dateKey = formatLocalDateKey(day);
+        const entries = dateKey ? appointmentsByDate.get(dateKey) || [] : [];
+        const isToday = todayKey === dateKey;
+          return (
+            <div
+              key={dateKey || day.toISOString()}
+              className={`space-y-2 rounded-2xl border bg-white p-3 shadow-sm dark:bg-gray-950 ${
+                isToday
+                ? 'border-gray-900 ring-2 ring-gray-900/10 dark:border-gray-200 dark:ring-gray-200/20'
+                : 'border-gray-200 dark:border-gray-800'
+            }`}
+            >
+              <button
+                type="button"
+                onClick={() => openDayModal(day)}
+                className="flex w-full items-center justify-between text-sm font-semibold text-gray-900 transition hover:text-gray-600 dark:text-gray-100 dark:hover:text-gray-200"
+              >
+                <span>{day.toLocaleDateString([], { weekday: 'short' })}</span>
+              <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                {day.getDate()}
+              </span>
+            </button>
+            {entries.length ? (
+              <div className="space-y-2">
+                {entries.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => setSelectedAppointmentId(entry.id)}
+                    className="w-full rounded-xl bg-gray-50 p-2 text-left text-xs transition hover:border hover:border-gray-200 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:bg-gray-900 dark:hover:bg-gray-800 dark:focus-visible:ring-gray-500"
+                  >
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{formatAppointmentTimeRange(entry)}</p>
+                    <p className="text-gray-600 dark:text-gray-300">{entry.client?.display_name || entry.guest_name}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {isLoadingAppointments ? 'Loading appointments...' : 'No appointments'}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderMonthView = () => {
+    const activeMonth = focusDate.getMonth();
+    const selectedDateKey = formatLocalDateKey(focusDate);
+    const selectedEntries = selectedDateKey ? appointmentsByDate.get(selectedDateKey) || [] : [];
+    const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return (
+      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <section className="space-y-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-950 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                Schedule for
+              </p>
+              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                {focusDate.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+            <Button type="button" variant="ghost" onClick={() => openDayModal(focusDate)}>
+              Open day
+            </Button>
+          </div>
+          <ol className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+            {selectedEntries.length ? (
+              selectedEntries.map((entry) => (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAppointmentId(entry.id)}
+                    className="group flex w-full items-center gap-3 rounded-2xl border border-gray-200 px-3 py-2 text-left transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:border-gray-800 dark:hover:bg-gray-900 dark:focus-visible:ring-gray-500"
+                  >
+                    <div className="flex-1">
+                      <p className="text-gray-900 dark:text-gray-100">
+                        {entry.client?.display_name || entry.guest_name || 'Guest client'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatAppointmentTimeRange(entry)} · {entry.status || 'pending'}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li className="rounded-2xl border border-dashed border-gray-300 px-3 py-4 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                {isLoadingAppointments ? 'Loading appointments...' : 'No appointments scheduled.'}
+              </li>
+            )}
+          </ol>
+        </section>
+
+        <section className="space-y-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:max-w-md lg:justify-self-end">
+          <div className="flex items-center justify-between text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <span>{focusDate.toLocaleDateString([], { month: 'long', year: 'numeric' })}</span>
+          </div>
+          <div className="grid grid-cols-7 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+            {weekdayLabels.map((label) => (
+              <span key={`mini-${label}`}>{label}</span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {monthDays.map((day, index) => {
+              const dateKey = formatLocalDateKey(day);
+              const entries = dateKey ? appointmentsByDate.get(dateKey) || [] : [];
+              const isCurrentMonth = day.getMonth() === activeMonth;
+              const isToday = dateKey === todayKey;
+              const isSelected = dateKey === selectedDateKey;
+              return (
+                <button
+                  key={dateKey || `mini-${index}`}
+                  type="button"
+                  onClick={() => setFocusDay(day)}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold transition ${
+                    isSelected
+                      ? 'bg-gray-900 text-white shadow-sm dark:bg-gray-100 dark:text-gray-900'
+                      : isToday
+                      ? 'border border-gray-900 text-gray-900 dark:border-gray-200 dark:text-gray-100'
+                      : isCurrentMonth
+                      ? 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-900'
+                      : 'text-gray-400 dark:text-gray-600'
+                  }`}
+                  aria-label={`View ${day.toLocaleDateString([], { month: 'long', day: 'numeric' })}`}
+                >
+                  <span className="relative flex h-full w-full items-center justify-center">
+                    {day.getDate()}
+                    {entries.length ? (
+                      <span className="absolute -bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-gray-900 dark:bg-gray-100" />
+                    ) : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+    );
+  };
+
+  const renderDayModal = () => {
+    if (!dayModalDate) {
+      return null;
+    }
+    const modalDateLabel = dayModalDate.toLocaleDateString([], {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    const isToday = formatLocalDateKey(dayModalDate) === todayKey;
+
+    return (
+      <Dialog open={Boolean(dayModalDate)} onClose={closeDayModal} title="Day schedule">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Selected day</p>
+            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{modalDateLabel}</p>
+            {isToday ? <p className="text-xs text-gray-500 dark:text-gray-400">Today</p> : null}
+          </div>
+          <div className="flex items-center gap-2">
+            <ActionIconButton icon={IconChevronLeft} label="Previous day" onClick={() => handleDayModalChange(-1)} />
+            <ActionIconButton icon={IconChevronRight} label="Next day" onClick={() => handleDayModalChange(1)} />
+            <Button type="button" variant="ghost" onClick={() => openDayModal(new Date())}>
+              Today
+            </Button>
+          </div>
+        </div>
+        {renderDayContent(dayModalDate)}
+      </Dialog>
+    );
+  };
+
+  const selectedAppointment = useMemo(
+    () => appointments.find((appointment) => appointment.id === selectedAppointmentId) || null,
+    [appointments, selectedAppointmentId]
+  );
+
+  const closeAppointmentModal = () => setSelectedAppointmentId(null);
+
+  const renderAppointmentModal = () => {
+    if (!selectedAppointment) {
+      return null;
+    }
+
+    const scheduledDate = selectedAppointment.scheduled_start
+      ? new Date(selectedAppointment.scheduled_start)
+      : null;
+    const scheduledLabel = scheduledDate
+      ? scheduledDate.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+      : 'Awaiting schedule';
+    const durationLabel = selectedAppointment.duration_minutes
+      ? `${selectedAppointment.duration_minutes} minutes`
+      : 'Not set';
+    const assigned =
+      selectedAppointment.assigned_admin?.name ||
+      selectedAppointment.assigned_admin?.display_name ||
+      selectedAppointment.assigned_admin?.email ||
+      'Unassigned';
+    const contact =
+      selectedAppointment.client?.email ||
+      selectedAppointment.guest_email ||
+      selectedAppointment.guest_phone ||
+      'No contact info';
+    const clientName = selectedAppointment.client?.display_name || selectedAppointment.guest_name || 'Guest client';
+    const reference = selectedAppointment.reference_code || `#${selectedAppointment.id}`;
+
+    return (
+      <Dialog open={Boolean(selectedAppointment)} onClose={closeAppointmentModal} title="Appointment details">
+        <div className="space-y-2 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{clientName}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Ref {reference}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1 rounded-2xl border border-gray-200 p-3 text-sm dark:border-gray-800">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Schedule</p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{scheduledLabel}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Duration: {durationLabel}</p>
+          </div>
+          <div className="space-y-1 rounded-2xl border border-gray-200 p-3 text-sm dark:border-gray-800">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Status</p>
+            <p className="font-semibold uppercase tracking-[0.2em] text-gray-900 dark:text-gray-100">
+              {selectedAppointment.status || 'pending'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Assigned: {assigned}</p>
+          </div>
+          <div className="space-y-1 rounded-2xl border border-gray-200 p-3 text-sm dark:border-gray-800">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Contact</p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{contact}</p>
+          </div>
+          <div className="space-y-1 rounded-2xl border border-gray-200 p-3 text-sm dark:border-gray-800">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Notes</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              {selectedAppointment.client_description || 'No notes yet.'}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={closeAppointmentModal}>
+            Close
+          </Button>
+          <Button type="button" onClick={() => navigate(`${selectedAppointment.id}`)}>
+            View full details
+          </Button>
+        </div>
+      </Dialog>
+    );
   };
 
   const renderCreatePanel = () => (
@@ -962,50 +1487,55 @@ export default function AdminCalendar() {
       ? `Showing ${filteredAppointments.length} of ${showingTotal} appointments`
       : `Showing ${filteredAppointments.length} appointments`;
 
+    if (isLoadingAppointments) {
+      return renderLoadingState();
+    }
+
     if (!filteredAppointments.length) {
       return renderEmptyState(hasSearchQuery ? 'No appointments match your search.' : 'No appointments scheduled yet.');
     }
 
     return (
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="w-full max-w-md">
-            <label htmlFor="admin-calendar-search" className="sr-only">
-              Search appointments
-            </label>
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm">🔍</span>
-              <input
-                id="admin-calendar-search"
-                type="search"
-                value={appointmentSearchQuery}
-                onChange={(event) => setAppointmentSearchQuery(event.target.value)}
-                placeholder="Search by client, contact, reference, or status"
-                className="w-full rounded-2xl border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label
-              htmlFor="admin-calendar-sort"
-              className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
-            >
-              Sort
-            </label>
-            <select
-              id="admin-calendar-sort"
-              value={appointmentSortOption}
-              onChange={(event) => setAppointmentSortOption(event.target.value)}
-              className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
-            >
-              <option value="schedule-asc">Upcoming (chronological)</option>
-              <option value="schedule-desc">Latest first</option>
-              <option value="status-asc">Status A → Z</option>
-              <option value="status-desc">Status Z → A</option>
-            </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{showingLabel}</p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="w-full min-w-[240px] lg:w-72">
+          <label htmlFor="admin-calendar-search" className="sr-only">
+            Search appointments
+          </label>
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm">🔍</span>
+            <input
+              id="admin-calendar-search"
+              type="search"
+              value={appointmentSearchQuery}
+              onChange={(event) => setAppointmentSearchQuery(event.target.value)}
+              placeholder="Search by client, contact, reference, or status"
+              className="w-full rounded-2xl border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+            />
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+          <label
+            htmlFor="admin-calendar-sort"
+            className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
+          >
+            Sort
+          </label>
+          <select
+            id="admin-calendar-sort"
+            value={appointmentSortOption}
+            onChange={(event) => setAppointmentSortOption(event.target.value)}
+            className="rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+          >
+            <option value="schedule-asc">Upcoming (chronological)</option>
+            <option value="schedule-desc">Latest first</option>
+            <option value="status-asc">Status A → Z</option>
+            <option value="status-desc">Status Z → A</option>
+          </select>
+        </div>
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400">{showingLabel}</p>
         <div className="flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
@@ -1277,7 +1807,11 @@ export default function AdminCalendar() {
   };
 
   const appointmentCountLabel =
-    totalAppointments === 1 ? '1 appointment scheduled' : `${totalAppointments} appointments scheduled`;
+    isLoadingAppointments
+      ? 'Loading appointments...'
+      : totalAppointments === 1
+      ? '1 appointment scheduled'
+      : `${totalAppointments} appointments scheduled`;
 
   return (
     <div className="space-y-8">
@@ -1321,6 +1855,44 @@ export default function AdminCalendar() {
             {renderCreatePanel()}
           </div>
         ) : null}
+        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
+                View
+              </p>
+              <p className="text-sm text-gray-700 dark:text-gray-200">{calendarHeadline}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center rounded-full border border-gray-200 bg-gray-50 p-1 text-xs font-semibold uppercase tracking-[0.2em] dark:border-gray-800 dark:bg-gray-900">
+                {['day', 'week', 'month'].map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleSetViewMode(mode)}
+                    className={`rounded-full px-4 py-2 transition ${
+                      viewMode === mode
+                        ? 'bg-gray-900 text-white shadow-sm dark:bg-gray-100 dark:text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <ActionIconButton icon={IconChevronLeft} label="Previous" onClick={() => handleChangeFocus(-1)} />
+                <ActionIconButton icon={IconChevronRight} label="Next" onClick={() => handleChangeFocus(1)} />
+                <Button type="button" variant="ghost" onClick={() => setFocusDate(new Date())}>
+                  Today
+                </Button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4">
+            {viewMode === 'day' ? renderDayView() : viewMode === 'week' ? renderWeekView() : renderMonthView()}
+          </div>
+        </div>
         <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
           {renderAppointmentList()}
         </div>
@@ -1595,6 +2167,9 @@ export default function AdminCalendar() {
           </section>
         </div>
       </Card>
+
+      {renderDayModal()}
+      {renderAppointmentModal()}
 
       <ConfirmDialog
         open={Boolean(confirmation)}
