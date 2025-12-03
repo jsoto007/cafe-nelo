@@ -14,6 +14,11 @@ export default function Dialog({ open, onClose, title, children, footer, classNa
   const overlayRef = useRef(null);
   const dialogRef = useRef(null);
   const titleId = useId();
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) {
@@ -32,7 +37,7 @@ export default function Dialog({ open, onClose, title, children, footer, classNa
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose?.();
+        onCloseRef.current?.();
       }
 
       if (event.key === 'Tab') {
@@ -61,7 +66,7 @@ export default function Dialog({ open, onClose, title, children, footer, classNa
       document.removeEventListener('keydown', handleKeyDown);
       previouslyFocused?.focus?.({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) {
     return null;
@@ -74,7 +79,7 @@ export default function Dialog({ open, onClose, title, children, footer, classNa
       className={`fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 px-4 py-6 sm:px-6 sm:py-10 ${className}`}
       onMouseDown={(event) => {
         if (event.target === overlayRef.current) {
-          onClose?.();
+          onCloseRef.current?.();
         }
       }}
     >
@@ -91,7 +96,7 @@ export default function Dialog({ open, onClose, title, children, footer, classNa
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onCloseRef.current?.()}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 text-gray-500 transition hover:border-gray-900 hover:text-black focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-300 dark:hover:text-gray-100 dark:focus-visible:ring-gray-600 dark:focus-visible:ring-offset-black"
             aria-label="Close dialog"
           >

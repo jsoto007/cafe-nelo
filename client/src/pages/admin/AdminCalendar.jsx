@@ -465,7 +465,7 @@ function ActionIconButton({ icon: Icon, label, onClick, tone = 'default', active
 
 export default function AdminCalendar() {
   const {
-    state: { appointments, appointmentsPagination, admins, schedule, loading },
+    state: { appointments, appointmentsPagination, admins, schedule, loading, users },
     actions: {
       setFeedback,
       createAppointment,
@@ -475,7 +475,8 @@ export default function AdminCalendar() {
       createClosure,
       updateClosure,
       deleteClosure,
-      loadMoreAppointments
+      loadMoreAppointments,
+      refreshUsers
     }
   } = useAdminDashboard();
   const navigate = useNavigate();
@@ -498,6 +499,8 @@ export default function AdminCalendar() {
   const [appointmentSearchQuery, setAppointmentSearchQuery] = useState('');
   const [appointmentSortOption, setAppointmentSortOption] = useState('schedule-asc');
   const [viewMode, setViewMode] = useState('month');
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [showClientSearchResults, setShowClientSearchResults] = useState(false);
   const [focusDate, setFocusDate] = useState(() => new Date());
   const [dayModalDate, setDayModalDate] = useState(null);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
@@ -514,6 +517,12 @@ export default function AdminCalendar() {
     setHoursDraft(normaliseOperatingHours(schedule.operating_hours));
   }, [schedule.operating_hours]);
 
+  useEffect(() => {
+    if (showCreateForm && !users.length) {
+      refreshUsers().catch(() => {});
+    }
+  }, [showCreateForm, users.length, refreshUsers]);
+
   const closures = useMemo(() => ensureArray(schedule.closures), [schedule.closures]);
   const closureDaysSet = useMemo(() => new Set(ensureArray(schedule.days_off)), [schedule.days_off]);
 
@@ -521,6 +530,31 @@ export default function AdminCalendar() {
     () => admins.map((admin) => ({ value: String(admin.id), label: admin.name })),
     [admins]
   );
+  const clientDirectory = useMemo(() => ensureArray(users), [users]);
+  const selectedClient = useMemo(() => {
+    const id = Number(newAppointmentDraft.client_id);
+    if (!id) {
+      return null;
+    }
+    return clientDirectory.find((client) => client.id === id) || null;
+  }, [clientDirectory, newAppointmentDraft.client_id]);
+  const filteredClients = useMemo(() => {
+    const query = clientSearchQuery.trim().toLowerCase();
+    const orderedDirectory = clientDirectory.slice().sort((a, b) => {
+      const aName = a?.display_name || a?.email || '';
+      const bName = b?.display_name || b?.email || '';
+      return aName.localeCompare(bName);
+    });
+    if (!query) {
+      return orderedDirectory.slice(0, 8);
+    }
+    return orderedDirectory
+      .filter((client) => {
+        const haystack = `${client?.display_name ?? ''} ${client?.email ?? ''} ${client?.phone ?? ''}`.toLowerCase();
+        return haystack.includes(query);
+      })
+      .slice(0, 8);
+  }, [clientDirectory, clientSearchQuery]);
   const isLoadingAppointments = loading && !appointments.length;
 
   const filteredAppointments = useMemo(() => {
@@ -675,6 +709,41 @@ export default function AdminCalendar() {
     }));
   };
 
+  const handleClientSearchChange = (value) => {
+    setClientSearchQuery(value);
+    if (newAppointmentDraft.client_id) {
+      handleCreateDraftChange('client_id', '');
+    }
+    setShowClientSearchResults(true);
+  };
+
+  const handleClientSelect = (client) => {
+    if (!client?.id) {
+      return;
+    }
+    setNewAppointmentDraft((prev) => ({
+      ...prev,
+      client_id: String(client.id),
+      guest_name: client.display_name || '',
+      guest_email: client.email || '',
+      guest_phone: client.phone || ''
+    }));
+    setClientSearchQuery(client.display_name || client.email || `Client #${client.id}`);
+    setShowClientSearchResults(false);
+  };
+
+  const handleClientClear = () => {
+    setNewAppointmentDraft((prev) => ({
+      ...prev,
+      client_id: '',
+      guest_name: '',
+      guest_email: '',
+      guest_phone: ''
+    }));
+    setClientSearchQuery('');
+    setShowClientSearchResults(false);
+  };
+
   const handleHoursDraftChange = (day, field, value) => {
     setHoursDraft((prev) =>
       prev.map((entry) => {
@@ -747,7 +816,7 @@ export default function AdminCalendar() {
     }
     const payload = buildAppointmentCreatePayload(normalizedDraft);
     if (!payload.client_id && (!payload.guest_name || !payload.guest_email)) {
-      setFeedback({ tone: 'offline', message: 'Provide client ID or guest name and email.' });
+      setFeedback({ tone: 'offline', message: 'Select a client or provide guest name and email.' });
       return;
     }
     setConfirmation({
@@ -871,6 +940,8 @@ export default function AdminCalendar() {
       if (activeConfirmation.type === 'create') {
         await createAppointment(activeConfirmation.payload);
         setNewAppointmentDraft(NEW_APPOINTMENT_TEMPLATE);
+        setClientSearchQuery('');
+        setShowClientSearchResults(false);
       } else if (activeConfirmation.type === 'update') {
         await updateAppointment(activeConfirmation.appointmentId, activeConfirmation.payload);
       } else if (activeConfirmation.type === 'delete') {
@@ -1321,22 +1392,69 @@ export default function AdminCalendar() {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <label
             htmlFor={NEW_APPOINTMENT_FIELD_IDS.clientId}
             className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400"
           >
-            Client ID
+            Client
           </label>
-          <input
-            id={NEW_APPOINTMENT_FIELD_IDS.clientId}
-            type="number"
-            min="1"
-            value={newAppointmentDraft.client_id}
-            onChange={(event) => handleCreateDraftChange('client_id', event.target.value)}
-            className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
-            placeholder="Existing client?"
-          />
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm">🔍</span>
+            <input
+              id={NEW_APPOINTMENT_FIELD_IDS.clientId}
+              type="search"
+              value={clientSearchQuery}
+              onFocus={() => setShowClientSearchResults(true)}
+              onBlur={() => {
+                setTimeout(() => setShowClientSearchResults(false), 120);
+              }}
+              onChange={(event) => handleClientSearchChange(event.target.value)}
+              className="w-full rounded-2xl border border-gray-200 bg-white py-2 pl-9 pr-24 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+              placeholder="Search by name, phone, or email"
+              autoComplete="off"
+            />
+            {newAppointmentDraft.client_id ? (
+              <button
+                type="button"
+                onClick={handleClientClear}
+                className="absolute inset-y-1 right-1 rounded-xl px-3 text-xs font-semibold uppercase tracking-[0.2em] text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-900"
+              >
+                Clear
+              </button>
+            ) : null}
+            {showClientSearchResults ? (
+              <div className="absolute z-10 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-950">
+                {filteredClients.length ? (
+                  filteredClients.map((client) => (
+                    <button
+                      key={client.id}
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        handleClientSelect(client);
+                      }}
+                      className="block w-full space-y-1 px-3 py-2 text-left transition hover:bg-gray-100 focus:outline-none dark:hover:bg-gray-900"
+                    >
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {client.display_name || 'Unnamed client'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {[client.email, client.phone].filter(Boolean).join(' · ') || 'No contact info'}
+                      </p>
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No clients match that search.</p>
+                )}
+              </div>
+            ) : null}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {selectedClient
+              ? `Selected ${selectedClient.display_name || 'client'} (#${selectedClient.id}).`
+              : 'Select an existing client or leave blank for a guest booking.'}
+          </p>
         </div>
         <div className="space-y-2">
           <label

@@ -506,8 +506,9 @@ export function AdminDashboardProvider({ children }) {
 
   const logout = useCallback(async () => {
     await authLogout();
-    navigate('/auth', { replace: true });
-  }, [authLogout, navigate]);
+    // Redirect to landing and force reload to clear any cached state.
+    window.location.href = '/';
+  }, [authLogout]);
 
   const updateUserRole = useCallback(
     async (userId, role) => {
