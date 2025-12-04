@@ -4363,7 +4363,9 @@ def admin_update_appointment(appointment_id):
     new_placement = appointment.tattoo_placement
     new_size = appointment.tattoo_size
     new_notes = appointment.placement_notes
-    should_validate_slot = 'scheduled_start' in payload or 'duration_minutes' in payload
+    requested_schedule_payload = "scheduled_start" in payload or "duration_minutes" in payload
+    requested_start_change = "scheduled_start" in payload
+    requested_duration_change = "duration_minutes" in payload
 
     if "status" in payload:
         status = (payload.get("status") or "").strip()
@@ -4456,15 +4458,31 @@ def admin_update_appointment(appointment_id):
             except (TypeError, ValueError):
                 return jsonify({"error": "Suggested duration must be an integer."}), 400
 
-    if should_validate_slot and new_start and new_duration:
+    existing_start_normalized = (
+        appointment.scheduled_start.replace(second=0, microsecond=0) if appointment.scheduled_start else None
+    )
+    new_start_normalized = new_start.replace(second=0, microsecond=0) if new_start else None
+    slot_start = new_start_normalized if new_start_normalized is not None else existing_start_normalized
+    slot_duration = new_duration if new_duration is not None else appointment.duration_minutes
+    schedule_changed = (
+        requested_schedule_payload
+        and slot_start is not None
+        and slot_duration is not None
+        and (
+            (requested_start_change and new_start_normalized != existing_start_normalized)
+            or (requested_duration_change and slot_duration != appointment.duration_minutes)
+        )
+    )
+
+    if schedule_changed and slot_start and slot_duration:
         available_slots, _window = build_available_slots(
-            new_start.date(),
-            new_duration,
+            slot_start.date(),
+            slot_duration,
             ignore_appointment_id=appointment.id,
             minimum_duration_minutes=schedule_minimum_duration,
             hours_map=schedule_hours_map,
         )
-        slot_available = any(abs(int((slot["start"] - new_start).total_seconds())) < 60 for slot in available_slots)
+        slot_available = any(abs(int((slot["start"] - slot_start).total_seconds())) < 60 for slot in available_slots)
         if not slot_available:
             return jsonify({"error": "Selected time slot is unavailable."}), 409
 

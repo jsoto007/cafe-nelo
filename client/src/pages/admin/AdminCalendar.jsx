@@ -45,6 +45,23 @@ const WEEK_LABELS = {
 const MINIMUM_APPOINTMENT_DURATION_MINUTES = 60;
 const SLOT_INTERVAL_MINUTES = 60;
 
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' }
+];
+
+const STATUS_STYLE_MAP = {
+  pending:
+    'bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900/50',
+  completed:
+    'bg-emerald-50 text-emerald-800 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-900/50',
+  cancelled:
+    'bg-rose-50 text-rose-800 ring-rose-600/20 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900/50',
+  default:
+    'bg-gray-100 text-gray-700 ring-gray-300 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-700'
+};
+
 function formatLocalDateTime(value) {
   if (!value) {
     return null;
@@ -168,14 +185,49 @@ function formatAppointmentTimeRange(appointment) {
   return `${start.toLocaleTimeString([], timeFormat)} – ${end.toLocaleTimeString([], timeFormat)}`;
 }
 
-function buildAppointmentUpdatePayload(draft) {
-  return {
-    status: draft.status?.trim() || 'pending',
-    scheduled_start: draft.scheduled_start ? fromDateTimeLocal(draft.scheduled_start) : null,
-    duration_minutes: draft.duration_minutes ? Number(draft.duration_minutes) : null,
-    assigned_admin_id: draft.assigned_admin_id ? Number(draft.assigned_admin_id) : null,
-    client_description: draft.client_description?.trim() || null
-  };
+function buildAppointmentUpdatePayload(appointment, draft) {
+  if (!appointment) {
+    return null;
+  }
+
+  const payload = {};
+
+  const normalizedStatus = (draft.status ?? '').trim() || 'pending';
+  if (normalizedStatus !== (appointment.status || 'pending')) {
+    payload.status = normalizedStatus;
+  }
+
+  const originalStartLocal = toDateTimeLocal(appointment.scheduled_start) || '';
+  const draftStartLocal = draft.scheduled_start || '';
+  if (draftStartLocal !== originalStartLocal) {
+    payload.scheduled_start = draftStartLocal ? fromDateTimeLocal(draftStartLocal) : null;
+  }
+
+  const originalDuration = appointment.duration_minutes ?? null;
+  const durationRaw = draft.duration_minutes;
+  const parsedDuration =
+    durationRaw === '' || durationRaw === null || durationRaw === undefined ? null : Number(durationRaw);
+  const normalizedDuration = Number.isFinite(parsedDuration) ? parsedDuration : null;
+  if (normalizedDuration !== originalDuration) {
+    payload.duration_minutes = normalizedDuration;
+  }
+
+  const originalAssignedId = appointment.assigned_admin?.id ?? null;
+  const assignedRaw = draft.assigned_admin_id;
+  const parsedAssigned =
+    assignedRaw === '' || assignedRaw === null || assignedRaw === undefined ? null : Number(assignedRaw);
+  const normalizedAssigned = Number.isFinite(parsedAssigned) ? parsedAssigned : null;
+  if (normalizedAssigned !== originalAssignedId) {
+    payload.assigned_admin_id = normalizedAssigned;
+  }
+
+  const originalNotes = appointment.client_description || null;
+  const normalizedNotes = draft.client_description?.trim() || null;
+  if (normalizedNotes !== originalNotes) {
+    payload.client_description = normalizedNotes;
+  }
+
+  return payload;
 }
 
 function buildAppointmentCreatePayload(draft) {
@@ -461,6 +513,29 @@ function ActionIconButton({ icon: Icon, label, onClick, tone = 'default', active
       <Icon className="h-4 w-4" />
     </button>
   );
+}
+
+function formatStatusLabel(value) {
+  if (!value) {
+    return '';
+  }
+  return value
+    .split(/[_\s-]+/)
+    .map((segment) => (segment ? segment[0].toUpperCase() + segment.slice(1) : ''))
+    .join(' ');
+}
+
+function buildStatusOptions(currentStatus) {
+  const options = [...STATUS_OPTIONS];
+  if (currentStatus && !options.some((option) => option.value === currentStatus)) {
+    options.push({ value: currentStatus, label: formatStatusLabel(currentStatus) });
+  }
+  return options;
+}
+
+function getStatusBadgeClasses(status) {
+  const key = (status || 'pending').toLowerCase();
+  return STATUS_STYLE_MAP[key] || STATUS_STYLE_MAP.default;
 }
 
 export default function AdminCalendar() {
@@ -767,6 +842,11 @@ export default function AdminCalendar() {
     if (!draft) {
       return;
     }
+    const appointment = appointments.find((entry) => entry.id === appointmentId);
+    if (!appointment) {
+      setFeedback({ tone: 'offline', message: 'Appointment not found.' });
+      return;
+    }
     const normalizedStart = alignScheduledStartInput(draft.scheduled_start);
     const normalizedDuration = alignDurationInput(draft.duration_minutes);
     const normalizedDraft = {
@@ -780,9 +860,9 @@ export default function AdminCalendar() {
         [appointmentId]: normalizedDraft
       }));
     }
-    const payload = buildAppointmentUpdatePayload(normalizedDraft);
-    if (!payload.status) {
-      setFeedback({ tone: 'offline', message: 'Status is required.' });
+    const payload = buildAppointmentUpdatePayload(appointment, normalizedDraft);
+    if (!payload || !Object.keys(payload).length) {
+      setFeedback({ tone: 'offline', message: 'No changes to save.' });
       return;
     }
     setConfirmation({
@@ -1085,6 +1165,8 @@ export default function AdminCalendar() {
     const clientName = appointment.client?.display_name || appointment.guest_name || 'Guest client';
     const timeRange = formatAppointmentTimeRange(appointment);
     const status = appointment.status || 'pending';
+    const statusClasses = getStatusBadgeClasses(status);
+    const statusLabel = formatStatusLabel(status) || 'Pending';
     const reference = appointment.reference_code || `#${appointment.id}`;
     return (
       <button
@@ -1095,8 +1177,10 @@ export default function AdminCalendar() {
       >
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{timeRange}</p>
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-600 ring-1 ring-inset ring-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-800">
-            {status}
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ring-1 ring-inset ${statusClasses}`}
+          >
+            {statusLabel}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
@@ -1209,9 +1293,16 @@ export default function AdminCalendar() {
                       <p className="text-gray-900 dark:text-gray-100">
                         {entry.client?.display_name || entry.guest_name || 'Guest client'}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatAppointmentTimeRange(entry)} · {entry.status || 'pending'}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{formatAppointmentTimeRange(entry)}</span>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ring-1 ring-inset ${getStatusBadgeClasses(
+                            entry.status
+                          )}`}
+                        >
+                          {formatStatusLabel(entry.status) || 'Pending'}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 </li>
@@ -1352,9 +1443,13 @@ export default function AdminCalendar() {
           </div>
           <div className="space-y-1 rounded-2xl border border-gray-200 p-3 text-sm dark:border-gray-800">
             <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">Status</p>
-            <p className="font-semibold uppercase tracking-[0.2em] text-gray-900 dark:text-gray-100">
-              {selectedAppointment.status || 'pending'}
-            </p>
+            <span
+              className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ring-1 ring-inset ${getStatusBadgeClasses(
+                selectedAppointment.status
+              )}`}
+            >
+              {formatStatusLabel(selectedAppointment.status) || 'Pending'}
+            </span>
             <p className="text-xs text-gray-500 dark:text-gray-400">Assigned: {assigned}</p>
           </div>
           <div className="space-y-1 rounded-2xl border border-gray-200 p-3 text-sm dark:border-gray-800">
@@ -1463,13 +1558,18 @@ export default function AdminCalendar() {
           >
             Status
           </label>
-          <input
+          <select
             id={NEW_APPOINTMENT_FIELD_IDS.status}
-            type="text"
             value={newAppointmentDraft.status}
             onChange={(event) => handleCreateDraftChange('status', event.target.value)}
             className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
-          />
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
           <label
@@ -1719,6 +1819,8 @@ export default function AdminCalendar() {
                         const adminId = `${baseId}-assigned-admin`;
                         const notesId = `${baseId}-notes`;
                         const isEditing = editingAppointmentId === appointment.id;
+                        const statusOptions = buildStatusOptions(draft.status ?? appointment.status);
+                        const statusLabel = formatStatusLabel(appointment.status) || 'Pending';
 
                         return [
                           <tr key={appointment.id} className="bg-white dark:bg-gray-950">
@@ -1741,8 +1843,12 @@ export default function AdminCalendar() {
                               </div>
                             </td>
                             <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-300">
-                              <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-950/50 dark:text-green-200">
-                                {appointment.status || 'pending'}
+                              <span
+                                className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-[0.2em] ring-1 ring-inset ${getStatusBadgeClasses(
+                                  appointment.status
+                                )}`}
+                              >
+                                {statusLabel}
                               </span>
                               {isDayOff ? (
                                 <span className="ml-2 inline-flex items-center rounded-md bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-950/50 dark:text-rose-200">
@@ -1792,15 +1898,20 @@ export default function AdminCalendar() {
                                       >
                                         Status
                                       </label>
-                                      <input
+                                      <select
                                         id={statusId}
-                                        type="text"
                                         value={draft.status ?? ''}
                                         onChange={(event) =>
                                           handleAppointmentDraftChange(appointment.id, 'status', event.target.value)
                                         }
                                         className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
-                                      />
+                                      >
+                                        {statusOptions.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
                                     </div>
                                     <div className="space-y-2">
                                       <label
