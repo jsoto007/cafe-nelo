@@ -416,6 +416,7 @@ export default function ShareYourIdea() {
 
   const minimumDurationNotice =
     selectedDate &&
+    !isFreeConsultationOffer &&
     effectiveMinimumDurationMinutes &&
     durationMinutes < effectiveMinimumDurationMinutes
       ? `Bookings on ${formattedSelectedDate} require at least ${formatDurationLabel(
@@ -453,6 +454,14 @@ export default function ShareYourIdea() {
   );
   const selectedSessionOption =
     availableSessionOptions.find((option) => option.id === selectedSessionOptionId) ?? null;
+  const isFreeConsultationOffer = Boolean(
+    selectedSessionOption &&
+      selectedSessionOption.price_cents === 0 &&
+      selectedSessionOption.duration_minutes === SLOT_INTERVAL_MINUTES
+  );
+  const minimumDurationForActiveChoice = isFreeConsultationOffer
+    ? selectedSessionOption?.duration_minutes ?? SLOT_INTERVAL_MINUTES
+    : effectiveMinimumDurationMinutes;
   const recommendedSessionOption =
     availableSessionOptions.find((option) => option.duration_minutes === suggestedMinutes) ?? null;
   useEffect(() => {
@@ -600,7 +609,7 @@ export default function ShareYourIdea() {
   }, [availabilityConfig, availabilityLoading]);
 
   const fetchSlots = useCallback(
-    async (dateIso, minutes) => {
+    async (dateIso, minutes, sessionOptionId = null) => {
       if (!dateIso) {
         return;
       }
@@ -610,6 +619,9 @@ export default function ShareYourIdea() {
           date: dateIso,
           duration_minutes: String(minutes)
         });
+        if (sessionOptionId != null) {
+          params.set('session_option_id', String(sessionOptionId));
+        }
         const data = await apiGet(`/api/availability?${params.toString()}`);
         const slots = Array.isArray(data?.slots) ? data.slots : [];
         setAvailableSlots(slots);
@@ -888,10 +900,10 @@ export default function ShareYourIdea() {
   ]);
 
   useEffect(() => {
-    if (durationMinutes < effectiveMinimumDurationMinutes) {
-      setDurationMinutes(effectiveMinimumDurationMinutes);
+    if (durationMinutes < minimumDurationForActiveChoice) {
+      setDurationMinutes(minimumDurationForActiveChoice);
     }
-  }, [durationMinutes, effectiveMinimumDurationMinutes]);
+  }, [durationMinutes, minimumDurationForActiveChoice]);
 
   useEffect(() => {
     if (!availabilityConfig) {
@@ -902,14 +914,21 @@ export default function ShareYourIdea() {
       setSlotsMeta({ isClosed: false, fullyBooked: false, workingWindow: null });
       return;
     }
-    const requestDuration = Math.max(durationMinutes, effectiveMinimumDurationMinutes);
-    fetchSlots(selectedDate, requestDuration);
+    const requestDuration = isFreeConsultationOffer
+      ? durationMinutes
+      : Math.max(durationMinutes, effectiveMinimumDurationMinutes);
+    const availabilitySessionOptionId = isFreeConsultationOffer
+      ? selectedSessionOption?.id ?? null
+      : null;
+    fetchSlots(selectedDate, requestDuration, availabilitySessionOptionId);
   }, [
     availabilityConfig,
     selectedDate,
     durationMinutes,
     fetchSlots,
-    effectiveMinimumDurationMinutes
+    effectiveMinimumDurationMinutes,
+    isFreeConsultationOffer,
+    selectedSessionOption?.id
   ]);
 
   useEffect(() => {

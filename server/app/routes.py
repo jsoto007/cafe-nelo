@@ -1535,6 +1535,7 @@ def build_available_slots(
     *,
     ignore_appointment_id: int | None = None,
     minimum_duration_minutes: int | None = None,
+    allow_shorter_than_weekday_minimum: bool = False,
     hours_map=None,
 ):
     hours_map = hours_map or fetch_working_hours_map()
@@ -1559,7 +1560,9 @@ def build_available_slots(
     weekday_minimum = _minimum_duration_for_weekday(weekday, hours_map=hours_map)
     if minimum_duration_minutes is not None:
         weekday_minimum = max(weekday_minimum, _coerce_minimum_duration(minimum_duration_minutes))
-    requested_duration_minutes = max(duration_minutes or weekday_minimum, weekday_minimum)
+    requested_duration_minutes = duration_minutes if duration_minutes is not None else weekday_minimum
+    if not allow_shorter_than_weekday_minimum:
+        requested_duration_minutes = max(requested_duration_minutes, weekday_minimum)
     if requested_duration_minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
         requested_duration_minutes = (
             (requested_duration_minutes // DEFAULT_SLOT_INTERVAL_MINUTES) + 1
@@ -1730,6 +1733,19 @@ def public_availability_slots():
         return jsonify({"error": "Invalid date format; use YYYY-MM-DD."}), 400
 
     duration_param = request.args.get("duration_minutes", type=int)
+    session_option_id_raw = request.args.get("session_option_id")
+    session_option = None
+    is_free_consultation = False
+    if session_option_id_raw is not None:
+        try:
+            session_option_id = int(session_option_id_raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "session_option_id must be a whole number."}), 400
+        session_option = SessionOption.query.filter_by(id=session_option_id, is_active=True).first()
+        if not session_option:
+            return jsonify({"error": "Session option not found."}), 404
+        is_free_consultation = session_option.price_cents == 0
+
     placement = request.args.get("placement")
     size = request.args.get("size")
 
@@ -1738,7 +1754,7 @@ def public_availability_slots():
     day_minimum = _minimum_duration_for_weekday(weekday, hours_map=working_hours_map)
     day_label = INDEX_TO_DAY.get(weekday, "this day").capitalize()
 
-    if duration_param is not None and duration_param < day_minimum:
+    def minimum_duration_error():
         hours_value = day_minimum / 60
         duration_desc = (
             f"{int(hours_value)} hour{'s' if hours_value != 1 else ''}"
@@ -1750,18 +1766,29 @@ def public_availability_slots():
             400,
         )
 
-    duration_minutes = duration_param or calculate_suggested_duration_minutes(placement, size)
-    if duration_minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
-        duration_minutes = int(
-            round(duration_minutes / DEFAULT_SLOT_INTERVAL_MINUTES) * DEFAULT_SLOT_INTERVAL_MINUTES
-        )
-    duration_minutes = max(duration_minutes, day_minimum)
+    duration_minutes = None
+    if session_option:
+        duration_minutes = session_option.duration_minutes
+        if not is_free_consultation and duration_minutes < day_minimum:
+            return minimum_duration_error()
+    else:
+        if duration_param is not None and duration_param < day_minimum:
+            return minimum_duration_error()
 
+        duration_minutes = duration_param or calculate_suggested_duration_minutes(placement, size)
+        if duration_minutes % DEFAULT_SLOT_INTERVAL_MINUTES != 0:
+            duration_minutes = int(
+                round(duration_minutes / DEFAULT_SLOT_INTERVAL_MINUTES) * DEFAULT_SLOT_INTERVAL_MINUTES
+            )
+        duration_minutes = max(duration_minutes, day_minimum)
+
+    allow_shorter = is_free_consultation
     slots, window = build_available_slots(
         target_date,
         duration_minutes,
         minimum_duration_minutes=day_minimum,
         hours_map=working_hours_map,
+        allow_shorter_than_weekday_minimum=allow_shorter,
     )
     return jsonify(
         {
