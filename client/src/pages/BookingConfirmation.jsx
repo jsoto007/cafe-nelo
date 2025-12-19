@@ -10,7 +10,7 @@ import { apiGet } from '../lib/api.js';
 import { sanitizeAppointmentForConfirmation } from '../lib/appointments.js';
 
 const BOOKING_RECEIPT_KEY = 'black-ink:last-booking';
-const LOCATION_LINE = '245 Mercer Street, Suite 4F, New York, NY';
+const LOCATION_LINE = '42 West Street, Suite 406, Brooklyn, NY';
 const STUDIO_EMAIL = 'artem@blackworknyc.com';
 const DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(LOCATION_LINE)}`;
 function readLatestAppointment() {

@@ -33,7 +33,7 @@ export default function About() {
           <SectionTitle
             eyebrow={null}
             title="Led by precision"
-            description="Founder and lead artist Nova Clarke blends architectural linework, meditative shading, and storytelling to create pieces that age with intention. Each session is guided by calm artistry, technical rigor, and a commitment to designs that feel personal for decades."
+            description="Founder and lead artist Artem Ermochenko brings his architectural experience and precision to the art world by creating balanced compositions and using a unique technique. Each session is designed to be a calm, meditative, and as painless as possible experience."
           />
 
           <div className="flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-gray-700 dark:text-gray-200">

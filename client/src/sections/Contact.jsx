@@ -12,7 +12,7 @@ const CONTACT_POINTS = [
   {
     id: 'email',
     heading: 'Email',
-    value: 'booking@blackworknyc.com',
+    value: 'info@blackworknyc.com',
     body: 'Best for sharing reference links and photos.'
   },
   {

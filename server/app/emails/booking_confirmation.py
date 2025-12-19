@@ -9,7 +9,7 @@ from flask import current_app
 
 from .base import brand_name, client_base_url, email_logo_url, mailgun_send
 
-DEFAULT_STUDIO_LOCATION = "245 Mercer Street, Suite 4F, New York, NY"
+DEFAULT_STUDIO_LOCATION = "42 West Street, Suite 406, Brooklyn, NY"
 BOOKING_SUPPORT_EMAIL = "Booking@blackworknyc.com"
 
 if TYPE_CHECKING:  # pragma: no cover
