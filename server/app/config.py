@@ -116,6 +116,7 @@ def configure_app(app: Flask) -> SQLAlchemy:
     app.config["SQUARE_ENVIRONMENT"] = os.getenv("SQUARE_ENVIRONMENT", "sandbox").lower()
     app.config["SQUARE_DEPOSIT_AMOUNT_CENTS"] = max(1, _int_from_env("SQUARE_DEPOSIT_AMOUNT_CENTS", 10000))
     app.config["SQUARE_DEPOSIT_CURRENCY"] = (os.getenv("SQUARE_DEPOSIT_CURRENCY") or "USD").upper()
+    app.config["SQUARE_COUNTRY_CODE"] = (os.getenv("SQUARE_COUNTRY_CODE") or "US").upper()
     if app.config["FLASK_ENV"] == "production":
         # Never use fake payments in production; real deposits must be charged.
         app.config["SQUARE_FAKE_PAYMENTS"] = False

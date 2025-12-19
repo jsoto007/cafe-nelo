@@ -255,6 +255,20 @@ function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
+function buildSquarePaymentRequest(payments, { amountCents, currencyCode, countryCode, label }) {
+  if (!payments || !amountCents) {
+    return null;
+  }
+  const totalAmount = (Math.max(1, amountCents) / 100).toFixed(2);
+  return payments.paymentRequest({
+    countryCode: (countryCode || 'US').toUpperCase(),
+    currencyCode: (currencyCode || 'USD').toUpperCase(),
+    total: { amount: totalAmount, label: label || 'Total' },
+    requestBillingContact: true,
+    requestShippingContact: false
+  });
+}
+
 function storeBookingReceipt(appointment) {
   const sanitized = sanitizeAppointmentForConfirmation(appointment);
   if (!sanitized) {
@@ -271,17 +285,18 @@ const WALLET_METHODS = [
   {
     id: 'applePay',
     label: 'Apple Pay',
-    factory: (payments) => payments.applePay?.()
+    factory: (payments, paymentRequest) => (paymentRequest ? payments.applePay?.(paymentRequest) : null)
   },
   {
     id: 'googlePay',
     label: 'Google Pay',
-    factory: (payments) => payments.googlePay?.()
+    factory: (payments, paymentRequest) => (paymentRequest ? payments.googlePay?.(paymentRequest) : null)
   },
   {
     id: 'samsungPay',
     label: 'Samsung Pay',
-    factory: (payments) => payments.wallet?.({ walletType: 'samsungPay' })
+    factory: (payments, paymentRequest) =>
+      paymentRequest ? payments.wallet?.({ walletType: 'samsungPay', paymentRequest }) : null
   }
 ];
 
@@ -889,6 +904,15 @@ export default function ShareYourIdea() {
           throw new Error('Payment form is unavailable. Refresh to try again.');
         }
         const payments = window.Square.payments(paymentConfig.application_id, paymentConfig.location_id);
+        const paymentRequest = buildSquarePaymentRequest(payments, {
+          amountCents: depositAmountCents,
+          currencyCode: depositCurrency,
+          countryCode: paymentConfig.country_code,
+          label: payFullAmount ? 'Session total' : 'Booking deposit'
+        });
+        if (!paymentRequest) {
+          throw new Error('Payment methods are unavailable right now. Please try again soon.');
+        }
         const card = await payments.card();
         await card.attach(cardContainerRef.current);
         if (cancelled) {
@@ -901,7 +925,7 @@ export default function ShareYourIdea() {
         for (const method of WALLET_METHODS) {
           let walletInstance;
           try {
-            walletInstance = await method.factory(payments);
+            walletInstance = await method.factory(payments, paymentRequest);
             if (!walletInstance) {
               continue;
             }
@@ -947,7 +971,7 @@ export default function ShareYourIdea() {
       setAvailableWallets([]);
       setWalletProcessing(null);
     };
-  }, [paymentConfig, depositAmountCents]);
+  }, [paymentConfig, depositAmountCents, depositCurrency, payFullAmount]);
 
   useEffect(() => {
     return () => {

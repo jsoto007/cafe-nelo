@@ -459,6 +459,10 @@ def _square_currency() -> str:
     return (current_app.config.get("SQUARE_DEPOSIT_CURRENCY") or "USD").upper()
 
 
+def _square_country_code() -> str:
+    return (current_app.config.get("SQUARE_COUNTRY_CODE") or "US").upper()
+
+
 def charge_square_payment(
     *,
     source_id: str,
@@ -2367,6 +2371,7 @@ def payment_configuration():
                 "minimum_booking_fee_percent": MINIMUM_BOOKING_FEE_PERCENT,
                 "supports_full_payment": True,
                 "currency": _square_currency(),
+                "country_code": _square_country_code(),
             }
         }
     )

@@ -70,6 +70,7 @@ The dev server proxies `/api/*` to `http://127.0.0.1:5000`, keeping credentialed
 | `SQUARE_ENVIRONMENT` | `server/.env` | `sandbox` or `production` (defaults to `sandbox`). |
 | `SQUARE_DEPOSIT_AMOUNT_CENTS` | `server/.env` | Booking deposit amount in cents (default `10000`, i.e. $100). |
 | `SQUARE_DEPOSIT_CURRENCY` | `server/.env` | Currency code for deposits (default `USD`). |
+| `SQUARE_COUNTRY_CODE` | `server/.env` | Two-letter country code for Apple/Google Pay payment requests (default `US`). |
 | `SQUARE_FAKE_PAYMENTS` | `server/.env` | Set to `true` to bypass real payments in development. |
 | `MAILGUN_DOMAIN` | `server/.env` | Mailgun domain used for outgoing confirmation & activation emails. |
 | `MAILGUN_API_KEY` | `server/.env` | Private Mailgun API key for delivering messages. |
