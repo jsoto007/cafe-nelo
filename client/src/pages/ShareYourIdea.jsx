@@ -414,16 +414,6 @@ export default function ShareYourIdea() {
 
   const calendarDays = useMemo(() => buildCalendarDays(calendarMonth), [calendarMonth]);
 
-  const minimumDurationNotice =
-    selectedDate &&
-    !isFreeConsultationOffer &&
-    effectiveMinimumDurationMinutes &&
-    durationMinutes < effectiveMinimumDurationMinutes
-      ? `Bookings on ${formattedSelectedDate} require at least ${formatDurationLabel(
-          effectiveMinimumDurationMinutes
-        )}.`
-      : null;
-
   const legacyDurationOptions = useMemo(() => {
     const options = new Set();
     const interval = availabilityConfig?.slotIntervalMinutes ?? SLOT_INTERVAL_MINUTES;
@@ -470,6 +460,15 @@ export default function ShareYourIdea() {
     }
   }, [availableSessionOptions, selectedSessionOptionId]);
   const recommendedCurrency = recommendedPricing?.currency ?? paymentConfig?.currency ?? 'USD';
+  const minimumDurationNotice =
+    selectedDate &&
+    !isFreeConsultationOffer &&
+    effectiveMinimumDurationMinutes &&
+    durationMinutes < effectiveMinimumDurationMinutes
+      ? `Bookings on ${formattedSelectedDate} require at least ${formatDurationLabel(
+          effectiveMinimumDurationMinutes
+        )}.`
+      : null;
   useEffect(() => {
     if (!selectedSessionOption) {
       return;

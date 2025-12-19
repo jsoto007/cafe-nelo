@@ -10,7 +10,7 @@ from flask import current_app
 from .base import brand_name, client_base_url, email_logo_url, mailgun_send
 
 DEFAULT_STUDIO_LOCATION = "42 West Street, Suite 406, Brooklyn, NY"
-BOOKING_SUPPORT_EMAIL = "Booking@blackworknyc.com"
+BOOKING_SUPPORT_EMAIL = "Booking@mail.blackworknyc.com"
 
 if TYPE_CHECKING:  # pragma: no cover
     from app.models import TattooAppointment
@@ -107,7 +107,7 @@ def send_booking_confirmation_email(
             f"&details={quote_plus(description)}"
             f"&location={quote_plus(studio_location)}"
         )
-        event_uid = f"{reference}-{appointment.id}@blackworknyc.com"
+        event_uid = f"{reference}-{appointment.id}@mail.blackworknyc.com"
         dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         ics_lines = [
             "BEGIN:VCALENDAR",

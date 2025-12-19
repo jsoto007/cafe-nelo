@@ -153,8 +153,8 @@ def send_internal_booking_notification(
         manage_url,
     )
     appointment_location = current_app.config.get("BOOKING_LOCATION_NAME") or brand
-    organizer_email = current_app.config.get("MAILGUN_FROM") or f"no-reply@{current_app.config.get('MAILGUN_DOMAIN') or 'blackworknyc.com'}"
-    internal_email = current_app.config.get("INTERNAL_BOOKING_NOTIFICATION_EMAIL") or "booking@blackworknyc.com"
+    organizer_email = current_app.config.get("MAILGUN_FROM") or f"no-reply@{current_app.config.get('MAILGUN_DOMAIN') or 'mail.blackworknyc.com'}"
+    internal_email = current_app.config.get("INTERNAL_BOOKING_NOTIFICATION_EMAIL") or "booking@mail.blackworknyc.com"
 
     calendar_invite_text: str | None = None
     calendar_invite_filename = f"{_safe_filename(reference)}.ics"
