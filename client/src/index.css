@@ -26,6 +26,13 @@
     background-color: rgba(17, 17, 17, 0.8);
     color: #f5f5f5;
   }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-size: 16px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button.jsx';
 import Card from '../../components/Card.jsx';
@@ -516,7 +516,7 @@ function buildStatusOptions(currentStatus) {
 
 export default function AdminCalendar() {
   const {
-    state: { appointments, appointmentsPagination, admins, schedule, loading, users },
+    state: { appointments, appointmentsPagination, admins, schedule, loading, users, appointmentsLoading },
     actions: {
       setFeedback,
       createAppointment,
@@ -527,6 +527,7 @@ export default function AdminCalendar() {
       updateClosure,
       deleteClosure,
       loadMoreAppointments,
+      refreshAppointments,
       refreshUsers
     }
   } = useAdminDashboard();
@@ -555,6 +556,7 @@ export default function AdminCalendar() {
   const [focusDate, setFocusDate] = useState(() => new Date());
   const [dayModalDate, setDayModalDate] = useState(null);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
+  const initialAppointmentsLoadRef = useRef(false);
 
   useEffect(() => {
     const drafts = {};
@@ -573,6 +575,21 @@ export default function AdminCalendar() {
       refreshUsers().catch(() => {});
     }
   }, [showCreateForm, users.length, refreshUsers]);
+
+  useEffect(() => {
+    if (initialAppointmentsLoadRef.current) {
+      return;
+    }
+    if (appointments.length) {
+      initialAppointmentsLoadRef.current = true;
+      return;
+    }
+    if (loading || appointmentsLoading) {
+      return;
+    }
+    initialAppointmentsLoadRef.current = true;
+    refreshAppointments().catch(() => {});
+  }, [appointments.length, loading, appointmentsLoading, refreshAppointments]);
 
   const closures = useMemo(() => ensureArray(schedule.closures), [schedule.closures]);
   const closureDaysSet = useMemo(() => new Set(ensureArray(schedule.days_off)), [schedule.days_off]);
@@ -606,7 +623,7 @@ export default function AdminCalendar() {
       })
       .slice(0, 8);
   }, [clientDirectory, clientSearchQuery]);
-  const isLoadingAppointments = loading && !appointments.length;
+  const isLoadingAppointments = !appointments.length && (loading || appointmentsLoading);
 
   const filteredAppointments = useMemo(() => {
     const query = appointmentSearchQuery.trim().toLowerCase();
@@ -1084,6 +1101,12 @@ export default function AdminCalendar() {
     requestAppointmentCreate();
   };
 
+  // Prevent any global/app-level key handlers (ex: calendar navigation shortcuts)
+  // from triggering while the user is typing in an input.
+  const stopGlobalHotkeysWhenTyping = (event) => {
+    event.stopPropagation();
+  };
+
   const handleChangeFocus = (direction) => {
     setFocusDate((prev) => {
       const next = new Date(prev);
@@ -1488,6 +1511,9 @@ export default function AdminCalendar() {
               className="w-full rounded-2xl border border-gray-200 bg-white py-2 pl-9 pr-24 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
               placeholder="Search by name, phone, or email"
               autoComplete="off"
+              onKeyDown={stopGlobalHotkeysWhenTyping}
+              onKeyUp={stopGlobalHotkeysWhenTyping}
+              onKeyDownCapture={stopGlobalHotkeysWhenTyping}
             />
             {newAppointmentDraft.client_id ? (
               <button
@@ -1709,6 +1735,9 @@ export default function AdminCalendar() {
               onChange={(event) => setAppointmentSearchQuery(event.target.value)}
               placeholder="Search by client, contact, reference, or status"
               className="w-full rounded-2xl border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-0 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:focus:border-gray-400"
+              onKeyDown={stopGlobalHotkeysWhenTyping}
+              onKeyUp={stopGlobalHotkeysWhenTyping}
+              onKeyDownCapture={stopGlobalHotkeysWhenTyping}
             />
           </div>
         </div>

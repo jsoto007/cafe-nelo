@@ -8,6 +8,7 @@ import { apiGet, resolveApiUrl } from '../../lib/api.js';
 import { ASSET_KIND_OPTIONS, useAdminDashboard } from './AdminDashboardContext.jsx';
 import { getAppointmentTypeLabel } from '../../lib/appointments.js';
 import { formatStatusLabel, getStatusBadgeClasses } from '../../lib/statusStyles.js';
+import { shouldIgnoreHotkeys } from '../../lib/hotkeys.js';
 
 const INITIAL_ASSET_DRAFT = {
   kind: 'note',
@@ -410,6 +411,9 @@ export default function AppointmentDetails() {
       return undefined;
     }
     const handleKeyDown = (event) => {
+      if (shouldIgnoreHotkeys(event)) {
+        return;
+      }
       if (event.key === 'Escape') {
         handleClosePreview();
       }

@@ -121,6 +121,7 @@ export function AdminDashboardProvider({ children }) {
     total: 0,
     pages: 1
   });
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [overview, setOverview] = useState(null);
   const [recentUsers, setRecentUsers] = useState([]);
   const [availableRoles, setAvailableRoles] = useState([]);
@@ -138,6 +139,12 @@ export function AdminDashboardProvider({ children }) {
   const [notices, setNotices] = useState([]);
   const noticeIdRef = useRef(0);
   const cacheRef = useRef({});
+  const pendingResourceLoadsRef = useRef(new Map());
+  const appointmentsLengthRef = useRef(appointments.length);
+
+  useEffect(() => {
+    appointmentsLengthRef.current = appointments.length;
+  }, [appointments.length]);
 
   const markFetched = useCallback((key) => {
     cacheRef.current[key] = Date.now();
@@ -234,20 +241,30 @@ export function AdminDashboardProvider({ children }) {
 
   const refreshAppointments = useCallback(
     async ({ page = 1, perPage = appointmentsPagination.per_page, append = false } = {}) => {
-      const params = new URLSearchParams();
-      params.set('page', page);
-      params.set('per_page', perPage);
-      const response = await apiGet(`/api/admin/appointments?${params.toString()}`);
-      const items = ensureArray(response?.items);
-      setAppointments((prev) => (append && page > 1 ? [...prev, ...items] : items));
-      setAppointmentsPagination({
-        page,
-        per_page: perPage,
-        total: response?.meta?.total ?? items.length,
-        pages: response?.meta?.pages ?? 1
-      });
-      markFetched('appointments');
-      return response;
+      const isInitialLoad = !append && appointmentsLengthRef.current === 0;
+      if (isInitialLoad) {
+        setAppointmentsLoading(true);
+      }
+      try {
+        const params = new URLSearchParams();
+        params.set('page', page);
+        params.set('per_page', perPage);
+        const response = await apiGet(`/api/admin/appointments?${params.toString()}`);
+        const items = ensureArray(response?.items);
+        setAppointments((prev) => (append && page > 1 ? [...prev, ...items] : items));
+        setAppointmentsPagination({
+          page,
+          per_page: perPage,
+          total: response?.meta?.total ?? items.length,
+          pages: response?.meta?.pages ?? 1
+        });
+        markFetched('appointments');
+        return response;
+      } finally {
+        if (isInitialLoad) {
+          setAppointmentsLoading(false);
+        }
+      }
     },
     [appointmentsPagination.per_page, markFetched]
   );
@@ -423,6 +440,21 @@ export function AdminDashboardProvider({ children }) {
     ]
   );
 
+  const enqueueResourceLoad = useCallback((key, loader) => {
+    if (!loader) {
+      return null;
+    }
+    const pending = pendingResourceLoadsRef.current.get(key);
+    if (pending) {
+      return pending;
+    }
+    const promise = loader().finally(() => {
+      pendingResourceLoadsRef.current.delete(key);
+    });
+    pendingResourceLoadsRef.current.set(key, promise);
+    return promise;
+  }, []);
+
   const prefetchResources = useCallback(
     async (resources, { force = false, ttl = DEFAULT_CACHE_TTL } = {}) => {
       const tasks = resources.map((resource) => {
@@ -435,11 +467,15 @@ export function AdminDashboardProvider({ children }) {
         if (!loader) {
           return null;
         }
-        return loader().catch(() => {});
+        const loadPromise = enqueueResourceLoad(key, loader);
+        if (!loadPromise) {
+          return null;
+        }
+        return loadPromise.catch(() => {});
       });
       await Promise.all(tasks.filter(Boolean));
     },
-    [resourceLoaders, shouldFetch]
+    [resourceLoaders, shouldFetch, enqueueResourceLoad]
   );
 
   useEffect(() => {
@@ -978,7 +1014,8 @@ export function AdminDashboardProvider({ children }) {
         appointments,
         appointmentsPagination,
         schedule,
-        pricing
+        pricing,
+        appointmentsLoading
       },
       actions: {
         showNotice,
@@ -1040,6 +1077,7 @@ export function AdminDashboardProvider({ children }) {
       galleryPagination,
       appointments,
       appointmentsPagination,
+      appointmentsLoading,
       schedule,
       pricing,
       showNotice,

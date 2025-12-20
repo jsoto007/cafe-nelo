@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { shouldIgnoreHotkeys } from '../lib/hotkeys.js';
 
 const FOCUSABLE_SELECTORS =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -35,11 +36,6 @@ export default function Dialog({ open, onClose, title, children, footer, classNa
     }
 
     function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCloseRef.current?.();
-      }
-
       if (event.key === 'Tab') {
         const elements = getFocusableElements(dialogRef.current);
         if (!elements.length) {
@@ -57,6 +53,15 @@ export default function Dialog({ open, onClose, title, children, footer, classNa
           event.preventDefault();
           first.focus();
         }
+      }
+
+      if (shouldIgnoreHotkeys(event)) {
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current?.();
       }
     }
 

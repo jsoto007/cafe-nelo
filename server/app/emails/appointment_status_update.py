@@ -97,8 +97,7 @@ def send_appointment_status_update_email(
         f'<img src="{escape(logo_url)}" alt="{escape(brand)} logo" '
         'style="height:60px;display:block;margin:0 auto 12px auto;">'
         if logo_url
-        else f'<div style="color:#ffffff;font-size:16px;font-weight:700;'
-        'letter-spacing:0.5px;">{escape(brand)}</div>'
+        else f'<div style="color:#ffffff;font-size:16px;font-weight:700;letter-spacing:0.5px;">{escape(brand)}</div>'
     )
 
     status_badge = (

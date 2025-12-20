@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { resolveApiUrl } from '../lib/api.js';
+import { shouldIgnoreHotkeys } from '../lib/hotkeys.js';
 import { prefetchImage } from '../lib/image.js';
 import ProgressiveImage from './ProgressiveImage.jsx';
 
@@ -71,11 +72,6 @@ export default function Lightbox({ open, image, images = [], startIndex = 0, onC
     }
 
     function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose?.();
-      }
-
       if (event.key === 'Tab') {
         const elements = getFocusableElements(dialogRef.current);
         if (!elements.length) {
@@ -93,6 +89,16 @@ export default function Lightbox({ open, image, images = [], startIndex = 0, onC
           first.focus();
         }
       }
+
+      if (shouldIgnoreHotkeys(event)) {
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
+      }
+
       if (event.key === 'ArrowRight') {
         event.preventDefault();
         if (hasCollection) {
