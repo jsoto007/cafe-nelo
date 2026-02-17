@@ -49,6 +49,11 @@ export default function Gallery() {
     enabled: Boolean(activeCategory)
   });
 
+  const { items: allGalleryItems } = useGalleryItems({
+    perPage: 100,
+    enabled: true
+  });
+
   useEffect(() => {
     const upcoming = categories.filter((category) => category.slug !== activeCategory?.slug).slice(0, 2);
     upcoming.forEach((category) => {
@@ -84,7 +89,13 @@ export default function Gallery() {
   const isRefreshing = itemsFetching && !itemsLoading;
   const showMessage = itemsError ? 'Unable to load this gallery right now.' : !items.length ? 'No artwork published yet.' : null;
   const globalMessage = categoriesError ? 'Unable to load gallery right now.' : null;
-  const lightboxItems = useMemo(() => items.map((item) => ({ ...item, image_url: resolveApiUrl(item.image_url) })), [items]);
+
+  // Use all items for the lightbox to allow full navigation
+  const lightboxItems = useMemo(() => {
+    const source = allGalleryItems.length > 0 ? allGalleryItems : items;
+    return source.map((item) => ({ ...item, image_url: resolveApiUrl(item.image_url) }));
+  }, [allGalleryItems, items]);
+
   const selectedImage = selectedIndex !== null && lightboxItems[selectedIndex] ? lightboxItems[selectedIndex] : null;
 
   const handleTabChange = (slug) => {
@@ -148,7 +159,9 @@ export default function Gallery() {
                             key={item.id || `${tabId}-${item.image_url}`}
                             type="button"
                             onClick={() => {
-                              setSelectedIndex(index);
+                              // Find the index of this item in the global lightboxItems list
+                              const globalIndex = lightboxItems.findIndex((i) => i.id === item.id);
+                              setSelectedIndex(globalIndex >= 0 ? globalIndex : 0);
                             }}
                             className="block w-full cursor-zoom-in overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-soft transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-gray-800 dark:bg-gray-900 dark:focus-visible:ring-gray-600 dark:focus-visible:ring-offset-black"
                             onMouseEnter={() => prefetchImage(imageUrl)}

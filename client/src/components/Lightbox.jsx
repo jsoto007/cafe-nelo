@@ -178,6 +178,32 @@ export default function Lightbox({ open, image, images = [], startIndex = 0, onC
           imageClassName="object-contain"
         />
         <figcaption className="mt-3 text-center text-sm text-gray-300">{activeImage.alt}</figcaption>
+
+        <div className="mt-6 flex justify-center">
+          <a
+            href="https://www.instagram.com/blackworknyc/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 rounded-full border border-gray-700 bg-black/40 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-gray-300 backdrop-blur transition hover:border-gray-500 hover:bg-black/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+            aria-label="View more on Instagram"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17" cy="7" r="1.25" />
+            </svg>
+            <span>View more</span>
+          </a>
+        </div>
+
         {hasCollection ? (
           <>
             <button
