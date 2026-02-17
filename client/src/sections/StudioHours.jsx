@@ -143,7 +143,6 @@ export default function StudioHours() {
         if (!isMounted) {
           return;
         }
-        console.error('Studio hours fetch failed', loadError);
         setError('Unable to load studio hours right now.');
       } finally {
         if (isMounted) {

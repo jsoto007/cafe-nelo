@@ -463,6 +463,7 @@ export default function ShareYourIdea() {
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [paymentConfigLoaded, setPaymentConfigLoaded] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('idle');
+  const [isSdkReady, setIsSdkReady] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const paymentsRef = useRef(null);
   const cardInstanceRef = useRef(null);
@@ -502,14 +503,14 @@ export default function ShareYourIdea() {
       : null;
   const workingWindowLabel = workingWindow?.day
     ? DAY_LABELS[workingWindow.day] ??
-      workingWindow.day.replace(/^\w/, (char) => char.toUpperCase())
+    workingWindow.day.replace(/^\w/, (char) => char.toUpperCase())
     : null;
   const workingWindowNotice =
     workingWindowRange && (formattedSelectedDate || workingWindowLabel)
       ? `Available hours on ${formattedSelectedDate || workingWindowLabel || 'this date'} are ${workingWindowRange}.`
       : workingWindowRange
-      ? `Available hours are ${workingWindowRange}.`
-      : null;
+        ? `Available hours are ${workingWindowRange}.`
+        : null;
   const requirementList = useMemo(
     () =>
       BOOKING_REQUIREMENTS.map((item, index) => (
@@ -554,8 +555,8 @@ export default function ShareYourIdea() {
     availableSessionOptions.find((option) => option.id === selectedSessionOptionId) ?? null;
   const isFreeConsultationOffer = Boolean(
     selectedSessionOption &&
-      selectedSessionOption.price_cents === 0 &&
-      selectedSessionOption.duration_minutes === SLOT_INTERVAL_MINUTES
+    selectedSessionOption.price_cents === 0 &&
+    selectedSessionOption.duration_minutes === SLOT_INTERVAL_MINUTES
   );
   const minimumDurationForActiveChoice = isFreeConsultationOffer
     ? selectedSessionOption?.duration_minutes ?? SLOT_INTERVAL_MINUTES
@@ -570,12 +571,12 @@ export default function ShareYourIdea() {
   const recommendedCurrency = recommendedPricing?.currency ?? paymentConfig?.currency ?? 'USD';
   const minimumDurationNotice =
     selectedDate &&
-    !isFreeConsultationOffer &&
-    effectiveMinimumDurationMinutes &&
-    durationMinutes < effectiveMinimumDurationMinutes
+      !isFreeConsultationOffer &&
+      effectiveMinimumDurationMinutes &&
+      durationMinutes < effectiveMinimumDurationMinutes
       ? `Bookings on ${formattedSelectedDate} require at least ${formatDurationLabel(
-          effectiveMinimumDurationMinutes
-        )}.`
+        effectiveMinimumDurationMinutes
+      )}.`
       : null;
   useEffect(() => {
     if (!selectedSessionOption) {
@@ -669,8 +670,8 @@ export default function ShareYourIdea() {
         ? `Pay ${depositAmountLabel || 'total amount'} & book`
         : `Pay ${depositAmountLabel || 'deposit'} & book`
       : paymentDue
-      ? 'Submit booking'
-      : 'Book appointment';
+        ? 'Submit booking'
+        : 'Book appointment';
   const submitLabel = submitting
     ? SUBMISSION_PROGRESS_LABELS[submissionStepIndex]
     : idleSubmitLabel;
@@ -841,25 +842,23 @@ export default function ShareYourIdea() {
     };
   }, []);
 
+  // Effect 1: Initialize Square SDK and Card (Stable)
   useEffect(() => {
-    const skipPaymentCollection = !paymentConfig?.enabled || depositAmountCents <= 0;
+    const skipPaymentCollection = !paymentConfig?.enabled || !paymentDue;
+
     if (skipPaymentCollection) {
-      setPaymentStatus(paymentConfig?.demo_mode || depositAmountCents <= 0 ? 'ready' : 'idle');
+      setPaymentStatus(paymentConfig?.demo_mode || !paymentDue ? 'ready' : 'idle');
+      setIsSdkReady(false);
+
       if (cardInstanceRef.current?.destroy) {
         cardInstanceRef.current.destroy();
       }
       cardInstanceRef.current = null;
       paymentsRef.current = null;
-      Object.values(walletInstancesRef.current).forEach((wallet) => wallet?.destroy?.());
-      walletInstancesRef.current = {};
-      setAvailableWallets([]);
-      setWalletProcessing(null);
       return;
     }
+
     setPaymentStatus('loading');
-    walletInstancesRef.current = {};
-    setAvailableWallets([]);
-    setWalletProcessing(null);
     let cancelled = false;
     const sdkUrl =
       paymentConfig.environment === 'production'
@@ -901,54 +900,28 @@ export default function ShareYourIdea() {
           throw new Error('Square SDK unavailable.');
         }
         if (!cardContainerRef.current) {
-          throw new Error('Payment form is unavailable. Refresh to try again.');
+          // This might happen if paymentDue changed rapidly or component unmounted
+          return;
         }
+
         const payments = window.Square.payments(paymentConfig.application_id, paymentConfig.location_id);
-        const paymentRequest = buildSquarePaymentRequest(payments, {
-          amountCents: depositAmountCents,
-          currencyCode: depositCurrency,
-          countryCode: paymentConfig.country_code,
-          label: payFullAmount ? 'Session total' : 'Booking deposit'
-        });
-        if (!paymentRequest) {
-          throw new Error('Payment methods are unavailable right now. Please try again soon.');
-        }
+        paymentsRef.current = payments;
+
         const card = await payments.card();
         await card.attach(cardContainerRef.current);
+
         if (cancelled) {
           card.destroy();
           return;
         }
-        paymentsRef.current = payments;
+
         cardInstanceRef.current = card;
-        const walletCandidates = [];
-        for (const method of WALLET_METHODS) {
-          let walletInstance;
-          try {
-            walletInstance = await method.factory(payments, paymentRequest);
-            if (!walletInstance) {
-              continue;
-            }
-            const availability = await walletInstance.canMakePayment?.();
-            const canUse =
-              typeof availability === 'boolean'
-                ? availability
-                : Boolean(availability?.canMakePayment ?? availability?.supported ?? availability);
-            if (canUse) {
-              walletInstancesRef.current[method.id] = walletInstance;
-              walletCandidates.push({ id: method.id, label: method.label });
-            } else {
-              walletInstance.destroy?.();
-            }
-          } catch {
-            walletInstance?.destroy?.();
-          }
-        }
-        if (!cancelled) {
-          setAvailableWallets(walletCandidates);
-        } else {
-          walletCandidates.forEach((wallet) => walletInstancesRef.current[wallet.id]?.destroy?.());
-        }
+        setIsSdkReady(true);
+        // We don't set 'ready' status here yet, we wait for wallets in the next effect? 
+        // Or actually, Card is ready, so user can technically type. 
+        // But let's keep 'loading' until wallets are checked to avoid UI jumpiness or set it here.
+        // The original code set 'ready' after wallet candidates were found.
+        // Let's set it to 'ready' here, and wallets will pop in when ready.
         setPaymentStatus('ready');
         setPaymentError(null);
       } catch (error) {
@@ -961,17 +934,93 @@ export default function ShareYourIdea() {
 
     return () => {
       cancelled = true;
+      setIsSdkReady(false);
       if (cardInstanceRef.current?.destroy) {
         cardInstanceRef.current.destroy();
       }
       cardInstanceRef.current = null;
       paymentsRef.current = null;
+    };
+  }, [paymentConfig, paymentDue]);
+
+  // Effect 2: Manage Payment Request and Wallets (Dynamic)
+  useEffect(() => {
+    // Determine if we should run wallet logic
+    // We need SDK ready, payment due, and valid config
+    if (!isSdkReady || !paymentConfig?.enabled || !paymentDue || !paymentsRef.current) {
+      // Cleanup wallets if we enter this state
       Object.values(walletInstancesRef.current).forEach((wallet) => wallet?.destroy?.());
       walletInstancesRef.current = {};
       setAvailableWallets([]);
       setWalletProcessing(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      // Reset wallets for new amount
+      setAvailableWallets([]);
+      Object.values(walletInstancesRef.current).forEach((wallet) => wallet?.destroy?.());
+      walletInstancesRef.current = {};
+
+      try {
+        const payments = paymentsRef.current;
+        const paymentRequest = buildSquarePaymentRequest(payments, {
+          amountCents: depositAmountCents,
+          currencyCode: depositCurrency,
+          countryCode: paymentConfig.country_code,
+          label: payFullAmount ? 'Session total' : 'Booking deposit'
+        });
+
+        if (!paymentRequest) {
+          return;
+        }
+
+        const walletCandidates = [];
+        for (const method of WALLET_METHODS) {
+          if (cancelled) break;
+
+          let walletInstance;
+          try {
+            walletInstance = await method.factory(payments, paymentRequest);
+            if (!walletInstance) {
+              continue;
+            }
+            const availability = await walletInstance.canMakePayment?.();
+            const canUse =
+              typeof availability === 'boolean'
+                ? availability
+                : Boolean(availability?.canMakePayment ?? availability?.supported ?? availability);
+
+            if (canUse) {
+              walletInstancesRef.current[method.id] = walletInstance;
+              walletCandidates.push({ id: method.id, label: method.label });
+            } else {
+              walletInstance.destroy?.();
+            }
+          } catch {
+            walletInstance?.destroy?.();
+          }
+        }
+
+        if (!cancelled) {
+          setAvailableWallets(walletCandidates);
+        } else {
+          Object.values(walletInstancesRef.current).forEach((wallet) => wallet?.destroy?.());
+        }
+      } catch {
+        // Silently ignore wallet initialization errors
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      Object.values(walletInstancesRef.current).forEach((wallet) => wallet?.destroy?.());
+      walletInstancesRef.current = {};
+      setAvailableWallets([]);
     };
-  }, [paymentConfig, depositAmountCents, depositCurrency, payFullAmount]);
+  }, [isSdkReady, depositAmountCents, depositCurrency, payFullAmount, paymentConfig, paymentDue]);
 
   useEffect(() => {
     return () => {
@@ -1300,7 +1349,7 @@ export default function ShareYourIdea() {
         return nextErrors;
       });
       uploads.forEach((entry, index) => {
-        cacheFileDataUrl(entry, 'inspiration', index).catch(() => {});
+        cacheFileDataUrl(entry, 'inspiration', index).catch(() => { });
       });
     } else {
       const originalFile = selectedFiles[0];
@@ -1334,7 +1383,7 @@ export default function ShareYourIdea() {
           [field]: entry
         };
       });
-      cacheFileDataUrl(entry, field).catch(() => {});
+      cacheFileDataUrl(entry, field).catch(() => { });
       setErrors((prev) => {
         const next = { ...prev };
         if (field === 'idFront') {
@@ -1532,8 +1581,8 @@ export default function ShareYourIdea() {
     const idFrontPromise = shouldSkipIdentityUpload
       ? Promise.resolve(null)
       : files.idFront?.file
-      ? cacheFileDataUrl(files.idFront, 'idFront')
-      : Promise.resolve(null);
+        ? cacheFileDataUrl(files.idFront, 'idFront')
+        : Promise.resolve(null);
     const inspirationPromises = files.inspiration.map((entry, index) =>
       entry?.file ? cacheFileDataUrl(entry, 'inspiration', index) : Promise.resolve(null)
     );
@@ -1843,10 +1892,10 @@ export default function ShareYourIdea() {
           disabled
             ? 'cursor-not-allowed border-transparent text-gray-400 opacity-50 dark:text-gray-600'
             : isSelected
-            ? 'border-gray-900 bg-gray-900 text-white shadow-sm dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
-            : isToday
-            ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-gray-100'
-            : 'border-transparent text-gray-700 hover:border-gray-900 hover:text-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-gray-100'
+              ? 'border-gray-900 bg-gray-900 text-white shadow-sm dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
+              : isToday
+                ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-gray-100'
+                : 'border-transparent text-gray-700 hover:border-gray-900 hover:text-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-gray-100'
         )}
       >
         {date.getDate()}
@@ -1896,11 +1945,10 @@ export default function ShareYourIdea() {
         {notice ? (
           <FadeIn
             immediate
-            className={`rounded-2xl border px-6 py-4 text-xs uppercase tracking-[0.3em] ${
-              noticeTone === 'success'
-                ? 'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
-                : 'border-gray-300 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200'
-            }`}
+            className={`rounded-2xl border px-6 py-4 text-xs uppercase tracking-[0.3em] ${noticeTone === 'success'
+              ? 'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
+              : 'border-gray-300 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200'
+              }`}
           >
             {notice}
           </FadeIn>
@@ -2027,11 +2075,10 @@ export default function ShareYourIdea() {
                         <button
                           type="button"
                           onClick={() => handlePlacementChange(option.value)}
-                          className={`flex w-full items-center px-4 py-2 text-left text-base sm:text-sm transition ${
-                            option.value === form.placement
-                              ? 'bg-gray-100 font-semibold text-gray-900 dark:bg-white/10 dark:text-white'
-                              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white'
-                          } ${focus ? 'outline-none ring-2 ring-gray-200 dark:ring-white/10' : ''}`}
+                          className={`flex w-full items-center px-4 py-2 text-left text-base sm:text-sm transition ${option.value === form.placement
+                            ? 'bg-gray-100 font-semibold text-gray-900 dark:bg-white/10 dark:text-white'
+                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white'
+                            } ${focus ? 'outline-none ring-2 ring-gray-200 dark:ring-white/10' : ''}`}
                         >
                           {option.label}
                         </button>
@@ -2071,11 +2118,10 @@ export default function ShareYourIdea() {
                         <button
                           type="button"
                           onClick={() => handleSizeChange(option.value)}
-                          className={`flex w-full items-center px-4 py-2 text-left text-base sm:text-sm transition ${
-                            option.value === form.size
-                              ? 'bg-gray-100 font-semibold text-gray-900 dark:bg-white/10 dark:text-white'
-                              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white'
-                          } ${focus ? 'outline-none ring-2 ring-gray-200 dark:ring-white/10' : ''}`}
+                          className={`flex w-full items-center px-4 py-2 text-left text-base sm:text-sm transition ${option.value === form.size
+                            ? 'bg-gray-100 font-semibold text-gray-900 dark:bg-white/10 dark:text-white'
+                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white'
+                            } ${focus ? 'outline-none ring-2 ring-gray-200 dark:ring-white/10' : ''}`}
                         >
                           {option.label}
                         </button>
@@ -2309,8 +2355,8 @@ export default function ShareYourIdea() {
                   {slotsMeta.isClosed
                     ? 'The studio is closed on this date.'
                     : slotsMeta.fullyBooked
-                    ? 'This date is fully booked. Try another day.'
-                    : 'Select a date to view available times.'}
+                      ? 'This date is fully booked. Try another day.'
+                      : 'Select a date to view available times.'}
                 </div>
               ) : null}
               <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
