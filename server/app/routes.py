@@ -1006,7 +1006,10 @@ def _serialize_asset_file_url(asset: AppointmentAsset):
     raw_url = decrypt_identity_value(asset.file_url) if asset.kind in {"id_front", "id_back"} else asset.file_url
     owner_id = asset.uploaded_by_client_id or (asset.appointment.client_id if asset.appointment else None)
     if owner_id:
-        return _normalize_private_upload_url(raw_url)
+        url = _normalize_private_upload_url(raw_url)
+        if url and not url.startswith("data:"):
+            return f"{url}?asset={asset.id}"
+        return url
     return raw_url
 
 
@@ -1294,16 +1297,22 @@ def _resolve_upload_access_control(filename: str | None) -> dict | None:
     if document:
         return {"client_id": document.client_id}
 
-    asset = (
-        AppointmentAsset.query.options(joinedload(AppointmentAsset.appointment))
-        .filter(
-            or_(
-                AppointmentAsset.file_url.in_(path_variants),
-                AppointmentAsset.file_url.like(like_pattern),
+    asset_id = request.args.get("asset", type=int) if request else None
+
+    if asset_id:
+        asset = AppointmentAsset.query.options(joinedload(AppointmentAsset.appointment)).get(asset_id)
+    else:
+        asset = (
+            AppointmentAsset.query.options(joinedload(AppointmentAsset.appointment))
+            .filter(
+                or_(
+                    AppointmentAsset.file_url.in_(path_variants),
+                    AppointmentAsset.file_url.like(like_pattern),
+                )
             )
+            .first()
         )
-        .first()
-    )
+
     if asset:
         # Use the correct column name from the AppointmentAsset model.
         owner_id = asset.uploaded_by_client_id or (asset.appointment.client_id if asset.appointment else None)
