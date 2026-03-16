@@ -1,19 +1,19 @@
 import SectionTitle from '../components/SectionTitle.jsx';
 
 const WAIVER_STATEMENTS = [
-  'I have been read and fully informed of the risks associated with getting a tattoo. I freely accept and expressly assume any and all risks that may arise from tattooing.',
-  'I waive and release to the fullest extent permitted by law any person of the Tattoo Studio from all liability, including claims for personal injury, whether caused by negligence or otherwise.',
-  'The Tattoo Studio has given me the full opportunity to ask any question about the procedure and all of my questions have been answered to my satisfaction.',
-  'The Tattoo Studio has given me instructions on the care of my tattoo while it is healing; I understand infection is possible if I do not follow those instructions.',
-  'I am not under the influence of alcohol or drugs and am voluntarily submitting to be tattooed without duress or coercion.',
-  'I do not suffer from diabetes, epilepsy, hemophilia, heart conditions, nor take blood thinners; I do not have any medical or skin condition that may interfere with the procedure or healing, and I am not pregnant, nursing, or mentally impaired.',
-  'I am not allergic to lidocaine, and I consent to its use as a numbing agent unless I inform my artist otherwise.',
-  'The Tattoo Studio is not responsible for the meaning or spelling of the symbol or text I provide or choose from the flash sheets.',
-  'Variations in color and design may exist between my selected art and the tattoo when it is applied, and the colors will fade over time.',
-  'A tattoo is a permanent change and can only be removed surgically or with laser, which may be disfiguring and costly.',
-  'I release the right to any photographs taken of me and consent to their reproduction unless I expressly inform the Tattoo Studio not to take pictures.',
-  'I agree that the Tattoo Studio has a NO REFUND policy on tattoos, piercing, retail sales, and deposits made to secure appointments.',
-  'I agree to reimburse the Tattoo Studio for any attorneys’ fees and costs if legal action I bring results in the Studio or Artist being the prevailing party.',
+  'I understand the services offered by Melodi Nails may include manicures, pedicures, gel services, acrylic services, nail art, shaping, cuticle care, and polish removal.',
+  'I have had the opportunity to ask questions about the service I am receiving, and all of my questions have been answered to my satisfaction before the appointment begins.',
+  'I agree to inform my nail technician before the service starts if I have allergies, sensitivities, infections, open wounds, skin irritation, nail damage, or any other condition that could affect the service or healing process.',
+  'I understand that nail services involve the use of tools, files, chemicals, gels, acrylic products, acetone, adhesives, and curing lamps, and I accept the ordinary risks associated with those services.',
+  'I understand that infection, irritation, allergic reaction, lifting, breakage, staining, or premature wear may occur, especially if I do not follow aftercare instructions or if I pick, bite, or misuse my nails after the service.',
+  'I confirm that I am voluntarily receiving the service and am not under the influence of alcohol or drugs in a manner that would impair my judgment or ability to provide informed consent.',
+  'I understand that colors, finishes, shapes, lengths, and nail art details may vary slightly from inspiration photos, digital mockups, or prior sets because of natural nail condition, lighting, product availability, and hand-made application.',
+  'I consent to reasonable trimming, shaping, buffing, cuticle care, and product removal necessary to complete the requested service safely and professionally.',
+  'I understand that artificial nails, gel, acrylic, and polish are cosmetic services that require proper maintenance, and results may vary based on lifestyle, nail condition, and aftercare.',
+  'I understand that refunds are not provided for completed services, and any correction or touch-up request is subject to studio review and timing requirements.',
+  'I release the right to any photographs taken of my nails during or after the service unless I expressly ask the studio not to photograph them.',
+  'I acknowledge that pricing should be confirmed before the service begins, including any add-ons for length, design, repairs, removals, or specialty finishes.',
+  'I agree to reimburse the salon for any attorneys’ fees and costs if legal action I bring results in the salon being the prevailing party.',
   'I acknowledge that I was not presented this document at the last minute and that I understand I am signing a contract waiving certain rights.',
   'If any provision of this release is invalid or unenforceable, it shall be severed and the remainder shall remain in effect.',
   'I hereby declare that I am of legal age, competent to sign this agreement, and have provided valid proof of age and identification.',
@@ -21,49 +21,45 @@ const WAIVER_STATEMENTS = [
 ];
 
 const VARIATION_PARAGRAPHS = [
-  'I acknowledge that if I have any condition that might affect the healing of this tattoo, I will advise my tattooer. I am not pregnant or nursing, and I am not under the influence of alcohol or drugs.',
-  'I do not have medical or skin conditions, such as acne, keloid scarring, eczema, psoriasis, freckles, moles, or sunburn in the area to be tattooed that may interfere with the work. If I have any infection or rash anywhere on my body, I will advise my tattooer.',
-  'I acknowledge it is not reasonably possible for the artist to determine whether I might have an allergic reaction to the pigments or processes, and I agree to accept that risk.',
-  'I acknowledge that infection is always possible, especially if I do not take proper care of my tattoo. I have received aftercare instructions and agree to follow them; any touch-up work needed due to my own negligence will be done at my own expense.',
-  'I understand that variations in color and design may exist between the art I selected and the tattoo as applied, and that darker skin may not display colors as bright as on light skin.',
-  'I understand that prior or future skin treatments, laser hair removal, plastic surgery, or other skin-altering procedures may result in adverse changes to my tattoo.',
-  'I acknowledge that a tattoo is a permanent change to my appearance, and I have been told no representations have been made regarding the ability to remove it later.',
-  'I confirm that, to my knowledge, I do not have a physical, mental, or medical impairment that would affect my wellbeing as a direct or indirect result of choosing to be tattooed.',
-  'I acknowledge I am over eighteen, that obtaining a tattoo is my choice alone, and I consent to any actions reasonably necessary by the studio to perform the procedure.'
+  'I acknowledge that if I have any condition that could affect the service, retention, or recovery of my natural nails or surrounding skin, I will advise my nail technician before the appointment begins.',
+  'I understand that it is not reasonably possible for the salon to guarantee that I will not experience sensitivity or an allergic reaction to products used during nail services, and I accept that risk.',
+  'I acknowledge that proper aftercare is essential. I will follow the salon’s aftercare guidance, avoid using my nails as tools, and understand that damage caused by my own negligence may require a paid repair or replacement service.',
+  'I understand that prior damage, thin nails, biting, picking, outside removal attempts, or future cosmetic or medical treatments may affect wear, appearance, or retention of the service.',
+  'I confirm that, to the best of my knowledge, I do not have a physical, mental, or medical impairment that would make the requested nail service unsafe for me.'
 ];
 
 const DISCLAIMER_POINTS = [
   'Neither we nor any of our third-party licensors or suppliers make any representations or warranties of any kind regarding the platform, and we disclaim all implied warranties, including merchantability and fitness for a particular purpose.',
   'We do not warrant that the site will function as described, be uninterrupted, free of harmful components, or that any content uploaded, downloaded, or stored will be timely, current, secure, or not lost or corrupted.',
-  'In no event will Blackworknyc LLC be liable for damages arising from the use of the services, including direct, indirect, consequential, incidental, special, or punitive damages pursuant to applicable law.'
+  'In no event will Melodi Nails be liable for damages arising from the use of the services, including direct, indirect, consequential, incidental, special, or punitive damages pursuant to applicable law.'
 ];
 
 const ACCOUNTS_POINTS = [
   'You are solely responsible for all activities that occur under your account and must maintain the confidentiality of any credentials provided.',
-  'Blackworknyc LLC may limit, suspend, deactivate, or cancel your account at any time without notice if you provide false information or violate these Terms.',
-  'You may cancel your account at any time via the cancel feature on the site or by emailing artem@blackworknyc.com.'
+  'Melodi Nails may limit, suspend, deactivate, or cancel your account at any time without notice if you provide false information or violate these Terms.',
+  'You may cancel your account at any time via the cancel feature on the site or by emailing nailsmelodi@gmail.com.'
 ];
 
 const PAYMENT_POINTS = [
-  'Once registered, you may place orders as described on the site, but Blackworknyc LLC reserves the right to accept, refuse, place on hold, or cancel any order and may require you to provide additional information.',
-  'Fees are due in full at order confirmation, and recurring charges are billed according to each User Feature. You authorize Blackworknyc LLC to charge your selected payment method.',
-  'Shipping carrier selection, charges, and delivery dates are determined by us, and orders may arrive in multiple shipments.',
-  'All sales are final unless otherwise stated, and claims regarding goods must be emailed within five days of receiving your order; we are not obligated to issue a refund.'
+  'When you book an appointment, Melodi Nails may require a deposit or full prepayment to reserve your time slot and may refuse, hold, or cancel any booking if information is incomplete or inaccurate.',
+  'You authorize Melodi Nails to charge your selected payment method for deposits, remaining balances, approved add-ons, late cancellation charges, no-show fees, or other amounts disclosed during booking.',
+  'Appointment prices may vary based on final service selection, nail length, design complexity, repairs, soak-off or removal work, and any upgrades requested at the appointment.',
+  'Completed services, deposits, and missed-appointment fees are non-refundable unless otherwise required by law or expressly approved by the salon.'
 ];
 
 const DISPUTE_PARAGRAPHS = [
-  'You and Blackworknyc LLC agree that any dispute arising from or relating to these Terms will be settled by binding arbitration administered by the American Arbitration Association (AAA) under its Commercial Arbitration Rules and Supplementary Procedures for Consumer Related Disputes.',
+  'You and Melodi Nails agree that any dispute arising from or relating to these Terms will be settled by binding arbitration administered by the American Arbitration Association (AAA) under its Commercial Arbitration Rules and Supplementary Procedures for Consumer Related Disputes.',
   'The arbitration will be conducted in New York, New York, unless both parties agree otherwise, and if your claim does not exceed $10,000, the arbitration proceeds on the documented record unless you request a hearing.',
   'You and the Company each waive the right to a trial by jury and agree that the arbitrator may not consolidate more than one person’s claims or preside over any class or representative proceeding.',
   'Judgment on any arbitration award may be entered in a court having jurisdiction thereof, and any award must be consistent with the limitation of liability set forth above.'
 ];
 
 const GENERAL_POINTS = [
-  'Any notices from Blackworknyc LLC will be in writing and delivered via email or by posting to the website.',
+  'Any notices from Melodi Nails will be in writing and delivered via email or by posting to the website.',
   'These Terms are governed by the laws of the State of New York and any disputes for which injunctive or equitable relief is requested must be brought in New York County state or federal court.',
   'If any provision of these Terms is found invalid or unenforceable, the remainder will remain in full force.',
   'Failure to enforce any right does not constitute a waiver, and any invalid arbitration or court ruling will be enforced to the maximum extent permissible.',
-  'These Terms represent the entire agreement between you and Blackworknyc LLC and may not be assigned by you, though Blackworknyc LLC may assign them at its discretion.',
+  'These Terms represent the entire agreement between you and Melodi Nails and may not be assigned by you, though Melodi Nails may assign them at its discretion.',
   'Sections covering Definitions, Acknowledgments and Disclaimers, Intellectual Property, Limitation of Liability, Indemnification, Dispute Resolution, and General Provisions shall survive termination of these Terms.'
 ];
 
@@ -73,25 +69,25 @@ export default function Policies() {
       <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-16">
         <SectionTitle
           eyebrow="Policies"
-          title="Terms of Service & Tattoo Consent"
-          description="Please read these Terms of Service, the Tattoo Consent Form, and supplementary policies carefully before booking."
+          title="Terms of Service & Nail Service Consent"
+          description="Please read these Terms of Service, the nail service consent terms, and supplementary policies carefully before booking."
         />
 
         <div className="space-y-6 text-xs uppercase tracking-[0.3em] text-gray-500">
-          <p>BLACKWORKNYC LLC</p>
+          <p>MELODI NAILS</p>
           <p>Brooklyn, NY · November, 2025</p>
         </div>
 
         <section className="space-y-4">
           <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.4em] text-gray-700">Tattoo Consent Form</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.4em] text-gray-700">Nail Service Consent</p>
             <p className="text-xs uppercase tracking-[0.35em] text-gray-500">
               READING TO SHOW THAT YOU UNDERSTAND EACH PROVISION. FEEL FREE TO ASK ANY QUESTIONS REGARDING THIS WAIVER.
             </p>
           </div>
           <p className="text-sm text-gray-600">
-            In consideration of receiving a tattoo from Blackworknyc LLC, including its artists, associates, apprentices,
-            agents, or employees (collectively the Tattoo Studio), I agree to the following:
+            In consideration of receiving nail services from Melodi Nails, including its nail technicians, staff,
+            contractors, agents, or employees (collectively the Salon), I agree to the following:
           </p>
           <ul className="space-y-2 text-sm text-gray-700">
             {WAIVER_STATEMENTS.map((statement) => (
@@ -106,8 +102,8 @@ export default function Policies() {
             ))}
           </div>
           <p className="text-sm text-gray-600">
-            IMPORTANT: PLEASE ASK YOUR ARTIST ABOUT THE PRICE OF YOUR TATTOO BEFORE BEGINNING THE PROCEDURE - it is your
-            responsibility to confirm the price of the tattoo.
+            IMPORTANT: PLEASE CONFIRM THE PRICE OF YOUR NAIL SERVICE BEFORE THE APPOINTMENT BEGINS. Final pricing may vary
+            based on length, design, add-ons, removals, or repairs.
           </p>
         </section>
 
@@ -121,19 +117,11 @@ export default function Policies() {
             and compliance with applicable laws.
           </p>
           <p className="text-sm text-gray-600">
-            Blackworknyc LLC provides an online informational site regarding the company’s tattooing services. The Terms
-            include this Tattoo Consent release, guidelines, and any supplemental terms posted for updates or information
-            purposes. Our privacy practices are described in the Privacy Policy available at{' '}
-            <a
-              className="underline text-gray-900"
-              href="https://www.blackworknyc.com/privacy-policy"
-              target="_blank"
-              rel="noreferrer"
-            >
-              https://www.blackworknyc.com/privacy-policy
-            </a>
-            . By accessing or submitting information, you confirm you have read, understand, and agree to comply with all
-            of these Terms. If you do not, you are not authorized to access the service.
+            Melodi Nails provides an online informational and booking site regarding the salon’s manicure, pedicure,
+            acrylic, gel, and related beauty services. These Terms include this nail service consent, booking guidelines,
+            and any supplemental terms posted for updates or informational purposes. By accessing the site, submitting
+            information, or booking an appointment, you confirm that you have read, understand, and agree to comply with
+            these Terms. If you do not agree, you may not use the service.
           </p>
         </section>
 
@@ -142,10 +130,10 @@ export default function Policies() {
             Explanation of the Site
           </p>
           <p className="text-sm text-gray-600">
-            Blackworknyc LLC may provide an online interactive and informational website through which it shares
-            information about its tattooing services and related offerings. In some cases, the Site offers e-commerce
-            services and links to third-party dealers, distributors, and affiliates. Notwithstanding the foregoing, the Site
-            is provided for informational purposes only.
+            Melodi Nails may provide an online interactive and informational website through which it shares information
+            about nail services, booking availability, pricing, policies, promotions, and related offerings. In some cases,
+            the Site may include e-commerce features, client account tools, payment functionality, or links to third-party
+            services. Notwithstanding the foregoing, the Site is provided for informational and booking purposes only.
           </p>
         </section>
 
@@ -200,8 +188,8 @@ export default function Policies() {
         <section className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-gray-500">User Conduct</p>
           <p className="text-sm text-gray-600">
-            You are responsible for compliance with all applicable laws when using the site. Blackworknyc LLC reserves the
-            right to investigate violations and remove any material it deems objectionable or harmful.
+            You are responsible for compliance with all applicable laws when using the site. Melodi Nails reserves the
+            right to investigate violations and remove any material it deems objectionable, abusive, fraudulent, or harmful.
           </p>
         </section>
 
@@ -210,16 +198,17 @@ export default function Policies() {
             Intellectual Property and User License
           </p>
           <p className="text-sm text-gray-600">
-            Blackworknyc LLC grants you a limited, non-exclusive license to access and use the site and any content
-            provided by us solely for your use. You agree not to copy, adapt, modify, create derivative works, distribute,
-            license, sell, transmit, broadcast, or otherwise exploit the site except as expressly permitted.
+            Melodi Nails grants you a limited, non-exclusive license to access and use the site and any content provided by
+            us solely for your personal, non-commercial use. You agree not to copy, adapt, modify, create derivative works,
+            distribute, license, sell, transmit, broadcast, or otherwise exploit the site except as expressly permitted.
           </p>
           <p className="text-sm text-gray-600">
-            By providing any User Content, you grant Blackworknyc LLC a worldwide, irrevocable, perpetual, royalty-free
-            license to use, copy, adapt, distribute, and create derivative works from that content.
+            By providing any User Content, you grant Melodi Nails a worldwide, irrevocable, perpetual, royalty-free license
+            to use, copy, adapt, distribute, and create derivative works from that content for operating, promoting, and
+            improving the business.
           </p>
           <p className="text-sm text-gray-600">
-            If you submit Suggestions for improvements, all rights in those Suggestions are assigned to Blackworknyc LLC.
+            If you submit suggestions for improvements, all rights in those suggestions are assigned to Melodi Nails.
           </p>
         </section>
 
@@ -232,7 +221,7 @@ export default function Policies() {
             by the American Arbitration Association under the Commercial Arbitration Rules and Supplementary Procedures
             for Consumer Related Disputes. Arbitration will occur in New York, New York unless otherwise mutually agreed. A
             claim not exceeding $10,000 will proceed on written submissions unless a hearing is requested, and you and
-            Blackworknyc LLC each waive the right to a jury trial and to participate in class or representative proceedings.
+            Melodi Nails each waive the right to a jury trial and to participate in class or representative proceedings.
           </p>
           <div className="space-y-2 text-sm text-gray-600">
             {DISPUTE_PARAGRAPHS.map((paragraph) => (
@@ -257,8 +246,8 @@ export default function Policies() {
         <section className="space-y-2 text-sm text-gray-600">
           <p>If you have any questions, contact:</p>
           <p>
-            Blackworknyc LLC<br />
-            Email: <a className="underline" href="mailto:artem@blackworknyc.com">artem@blackworknyc.com</a>
+            Melodi Nails<br />
+            Email: <a className="underline" href="mailto:nailsmelodi@gmail.com">nailsmelodi@gmail.com</a>
           </p>
         </section>
       </div>
