@@ -64,14 +64,11 @@ The dev server proxies `/api/*` to `http://127.0.0.1:5000`, keeping credentialed
 | `UPLOADS_S3_REGION` | `server/.env` | AWS region for the uploads bucket. |
 | `UPLOADS_PUBLIC_BASE_URL` | `server/.env` | Optional CDN/base URL for uploaded media. |
 | `UPLOADS_S3_PREFIX` | `server/.env` | Optional key prefix (default `uploads`). |
-| `SQUARE_APPLICATION_ID` | `server/.env` | Square Web Payments application ID. |
-| `SQUARE_LOCATION_ID` | `server/.env` | Square location ID that receives deposits. |
-| `SQUARE_ACCESS_TOKEN` | `server/.env` | Square access token (use sandbox token for testing). |
-| `SQUARE_ENVIRONMENT` | `server/.env` | `sandbox` or `production` (defaults to `sandbox`). |
-| `SQUARE_DEPOSIT_AMOUNT_CENTS` | `server/.env` | Booking deposit amount in cents (default `10000`, i.e. $100). |
-| `SQUARE_DEPOSIT_CURRENCY` | `server/.env` | Currency code for deposits (default `USD`). |
-| `SQUARE_COUNTRY_CODE` | `server/.env` | Two-letter country code for Apple/Google Pay payment requests (default `US`). |
-| `SQUARE_FAKE_PAYMENTS` | `server/.env` | Set to `true` to bypass real payments in development. |
+| `STRIPE_SECRET_KEY` | `server/.env` | Stripe secret key used to create Checkout sessions. |
+| `STRIPE_PUBLISHABLE_KEY` | `server/.env` | Stripe publishable key exposed to the client config endpoint. |
+| `STRIPE_CURRENCY` | `server/.env` | Currency code for bookings (default `USD`). |
+| `STRIPE_COUNTRY_CODE` | `server/.env` | Two-letter country code for checkout display (default `US`). |
+| `STRIPE_FAKE_PAYMENTS` | `server/.env` | Set to `true` to bypass live Stripe checkout during development. |
 | `MAILGUN_DOMAIN` | `server/.env` | Mailgun domain used for outgoing confirmation & activation emails. |
 | `MAILGUN_API_KEY` | `server/.env` | Private Mailgun API key for delivering messages. |
 | `MAILGUN_FROM` | `server/.env` | Sender address for automated emails (e.g. `Black Ink Tattoo <noreply@mg.blackink.com>`). |
@@ -80,8 +77,7 @@ The dev server proxies `/api/*` to `http://127.0.0.1:5000`, keeping credentialed
 ### Payments & uploads
 
 - **Uploads** – When the optional `UPLOADS_S3_*` variables are populated, media uploaded from the admin dashboard is streamed directly to S3 and served from the bucket (or a CDN you configure with `UPLOADS_PUBLIC_BASE_URL`). Without these values, uploads are stored in the database (and mirrored to disk) so they survive deployments; S3/CDN storage is still recommended for large files.
-- **Square deposits** – Booking submissions now use the Square Web Payments SDK and the `/api/appointments` endpoint records a deposit before storing the appointment. Provide the Square sandbox credentials listed above for testing, or switch `SQUARE_ENVIRONMENT=production` with a live access token for launch. Use `SQUARE_FAKE_PAYMENTS=true` locally if you want to bypass card entry entirely.
-- **Digital wallets (Apple Pay, Samsung Pay)** – Enable digital wallets for your Square application in the Developer Dashboard, upload the Apple Pay merchant certificate derived from `server/app/static/square-certificate-signing-request.csr`, and verify the domain by serving the `apple-developer-merchantid-domain-association` file at `/.well-known/apple-developer-merchantid-domain-association`. Place the verified file in `client/public/.well-known/` so Vite copies it into `client/dist/.well-known/` during the build, then mirror the same contents under `server/app/static/.well-known/` so Flask’s custom route can serve it for pre-built deployments. Once these files are live and Square can fetch the verified payload, the Square Web Payments SDK will surface Apple Pay and Samsung Pay buttons automatically.
+- **Stripe checkout** – Booking submissions now create an appointment draft and redirect the client into Stripe Checkout. After payment succeeds, the confirmation page verifies the Stripe session and records the payment against the appointment. Use `STRIPE_FAKE_PAYMENTS=true` locally if you want to bypass live checkout during development.
 
 ## Architecture
 
@@ -103,3 +99,4 @@ The dev server proxies `/api/*` to `http://127.0.0.1:5000`, keeping credentialed
 - Automated tests force `DATABASE_URI` to an in-memory SQLite instance so test runs stay isolated from shared databases.
 - Update CORS origins in `app/__init__.py` if production hosts differ from local defaults.
 # black-work-tattoo
+# melodi-nails-full-stack
