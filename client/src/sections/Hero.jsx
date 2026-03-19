@@ -90,7 +90,7 @@ export default function Hero() {
             deposit or the full amount with Stripe.
           </p>
           <div className="flex flex-col gap-4 sm:flex-row">
-            <Button type="button" onClick={() => navigate('/share-your-idea')}>
+            <Button type="button" onClick={() => navigate('/appointments/new')}>
               Reserva Ahora
             </Button>
             <Button as="a" href="#services" variant="secondary">

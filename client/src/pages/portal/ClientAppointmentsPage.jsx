@@ -128,7 +128,7 @@ export default function ClientAppointmentsPage() {
       return (
         <Card className="flex flex-col items-start gap-3 text-xs uppercase tracking-[0.3em] text-gray-500">
           <p>{message}</p>
-          <Button as={Link} to="/share-your-idea" variant="ghost">
+          <Button as={Link} to="/appointments/new" variant="ghost">
             Book consult
           </Button>
         </Card>
@@ -176,7 +176,7 @@ export default function ClientAppointmentsPage() {
                     </Button>
                   </>
                 ) : (
-                  <Button variant="ghost" onClick={() => navigate('/share-your-idea')}>
+                  <Button variant="ghost" onClick={() => navigate('/appointments/new')}>
                     Rebook
                   </Button>
                 )}
@@ -222,7 +222,7 @@ export default function ClientAppointmentsPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Appointments</p>
             <p className="text-sm text-gray-500">Manage your studio time with confidence.</p>
           </div>
-          <Button as={Link} to="/share-your-idea">
+          <Button as={Link} to="/appointments/new">
             Book consult
           </Button>
         </div>

@@ -14,7 +14,10 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.sqlite
 *.sqlite3
+*.db
+*.db-journal
 
 # Virtual environments
 .venv/

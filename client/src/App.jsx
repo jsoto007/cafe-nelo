@@ -47,7 +47,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/activate-account" element={<ActivateAccount />} />
-        <Route path="/share-your-idea" element={<ShareYourIdea />} />
+        <Route path="/appointments/new" element={<ShareYourIdea />} />
         <Route path="/booking/confirmation" element={<BookingConfirmation />} />
         <Route path="/policies" element={<Navigate to="/policies/terms" replace />} />
         <Route path="/policies/terms" element={<Policies />} />

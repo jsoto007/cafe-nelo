@@ -306,7 +306,7 @@ export default function BookingConfirmation() {
                   View dashboard
                 </Button>
               ) : (
-                <Button as={Link} to="/share-your-idea">
+                <Button as={Link} to="/appointments/new">
                   Book another appointment
                 </Button>
               )}
@@ -332,7 +332,7 @@ export default function BookingConfirmation() {
                 Use the reference code and contact email sent to you (or revisit the confirmation link) to view the full details even without signing in.
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button as={Link} to="/share-your-idea">
+                <Button as={Link} to="/appointments/new">
                   Start a booking
                 </Button>
                 <Button as={Link} to="/" variant="secondary">

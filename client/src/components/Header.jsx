@@ -76,7 +76,7 @@ export default function Header() {
   };
 
   const handleConsultNavigate = () => {
-    navigate('/share-your-idea');
+    navigate('/appointments/new');
     closeMenu();
   };
 

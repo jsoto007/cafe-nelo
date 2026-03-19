@@ -49,7 +49,7 @@ export default function Booking() {
               <ul className="space-y-4">{requirementList}</ul>
             </div>
             <div className="flex items-center md:justify-end">
-              <Button type="button" onClick={() => navigate('/share-your-idea')} className="w-full px-10 py-4 md:w-auto">
+              <Button type="button" onClick={() => navigate('/appointments/new')} className="w-full px-10 py-4 md:w-auto">
                 Start Booking
               </Button>
             </div>

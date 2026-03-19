@@ -174,7 +174,7 @@ export default function StudioHours() {
           />
           <div className="flex justify-center">
             <Link
-              to="/share-your-idea"
+              to="/appointments/new"
               className="inline-flex items-center gap-2 rounded-full border border-[#2a3923] px-6 py-2 text-sm font-medium text-[#2a3923] transition hover:bg-[#f3e7d9]"
             >
               Book Appointment <span className="text-lg">→</span>

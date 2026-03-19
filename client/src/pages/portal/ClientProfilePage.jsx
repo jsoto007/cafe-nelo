@@ -526,7 +526,7 @@ export default function ClientProfilePage() {
             <Button variant="ghost" onClick={() => setIsEditingProfile((prev) => !prev)}>
               {isEditingProfile ? 'Cancel edit' : 'Edit profile'}
             </Button>
-            <Button onClick={() => navigate('/share-your-idea')}>Book appointment</Button>
+            <Button onClick={() => navigate('/appointments/new')}>Book appointment</Button>
           </div>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -739,7 +739,7 @@ export default function ClientProfilePage() {
             <Button variant="ghost" onClick={focusInspirationUpload}>
               Upload files
             </Button>
-            <Button variant="secondary" onClick={() => navigate('/share-your-idea')}>
+            <Button variant="secondary" onClick={() => navigate('/appointments/new')}>
               Book appointment
             </Button>
           </div>

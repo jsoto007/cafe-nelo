@@ -204,7 +204,7 @@ export default function ClientDashboardPage() {
               </Button>
             </>
           ) : (
-            <Button variant="ghost" onClick={() => navigate('/share-your-idea')}>
+            <Button variant="ghost" onClick={() => navigate('/appointments/new')}>
               Rebook
             </Button>
           )}
@@ -278,7 +278,7 @@ export default function ClientDashboardPage() {
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-[0.4em] text-gray-500">No upcoming sessions yet</p>
                 <p className="text-sm text-gray-600">Book a consult to set up your next session.</p>
-                <Button as={Link} to="/share-your-idea">
+                <Button as={Link} to="/appointments/new">
                   Book consult
                 </Button>
               </div>
@@ -303,7 +303,7 @@ export default function ClientDashboardPage() {
           ) : (
             <div className="space-y-2 text-xs uppercase tracking-[0.3em] text-gray-500">
               <p>You don’t have any upcoming sessions yet.</p>
-              <Button as={Link} to="/share-your-idea" variant="ghost">
+              <Button as={Link} to="/appointments/new" variant="ghost">
                 Book consult
               </Button>
             </div>
@@ -344,7 +344,7 @@ export default function ClientDashboardPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Quick actions</p>
             <p className="text-sm text-gray-500">Shortcuts to the features you use most often.</p>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/share-your-idea')}>
+          <Button variant="ghost" onClick={() => navigate('/appointments/new')}>
             Book consult
           </Button>
         </div>
