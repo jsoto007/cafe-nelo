@@ -4,6 +4,8 @@ import FadeIn from '../components/FadeIn.jsx';
 import Button from '../components/Button.jsx';
 import Card from '../components/Card.jsx';
 import { apiGet, apiPost } from '../lib/api.js';
+import { loadStripe } from '@stripe/stripe-js';
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 
 const BOOKING_RECEIPT_KEY = 'melodi-nails:last-booking';
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
@@ -163,6 +165,11 @@ export default function ShareYourIdea() {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [paymentConfig, setPaymentConfig] = useState(null);
+  const [clientSecret, setClientSecret] = useState(null);
+
+  const stripePromise = useMemo(() => {
+    return paymentConfig?.publishable_key ? loadStripe(paymentConfig.publishable_key) : null;
+  }, [paymentConfig?.publishable_key]);
   const [availability, setAvailability] = useState([]);
   const [availabilityMeta, setAvailabilityMeta] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -285,7 +292,23 @@ export default function ShareYourIdea() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errors = validate();
-    if (Object.keys(errors).length) { setFormErrors(errors); return; }
+    if (Object.keys(errors).length) { 
+      setFormErrors(errors); 
+      setTimeout(() => {
+        const firstErrorField = Object.keys(errors)[0];
+        let element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (!element && firstErrorField === 'session_option_id') {
+          element = document.getElementById('service-selection-section');
+        } else if (!element && firstErrorField === 'scheduled_start') {
+          element = document.getElementById('time-selection-section');
+        }
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (typeof element.focus === 'function') element.focus({ preventScroll: true });
+        }
+      }, 50);
+      return; 
+    }
     setSubmitting(true);
     setPageError('');
     try {
@@ -304,9 +327,14 @@ export default function ShareYourIdea() {
       const response = await apiPost('/api/appointments', payload);
       const appointment = response?.appointment || null;
       if (appointment) storeLatestAppointment(appointment);
-      if (response?.requires_payment && response?.checkout_url) {
-        window.location.assign(response.checkout_url);
-        return;
+      if (response?.requires_payment) {
+        if (response.checkout_client_secret) {
+          setClientSecret(response.checkout_client_secret);
+          return;
+        } else if (response.checkout_url) {
+          window.location.assign(response.checkout_url);
+          return;
+        }
       }
       navigate('/booking/confirmation', { state: { appointment } });
     } catch (error) {
@@ -324,6 +352,24 @@ export default function ShareYourIdea() {
   const step1Done = !!(form.first_name && form.last_name && form.email && form.phone);
   const step2Done = !!selectedProduct;
   const step3Done = !!form.scheduled_start;
+
+  if (clientSecret && stripePromise) {
+    return (
+      <main className="min-h-screen bg-[#ECE7E2] py-12">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <FadeIn className="text-center mb-10">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.4em] text-[#6f7863]">Secure Checkout</p>
+            <h1 className="font-serif text-3xl text-[#2a3923] sm:text-4xl">Complete your booking</h1>
+          </FadeIn>
+          <Card className="p-0 overflow-hidden bg-white shadow-xl max-w-2xl mx-auto rounded-3xl min-h-[600px] relative">
+            <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}>
+              <EmbeddedCheckout className="py-8" />
+            </EmbeddedCheckoutProvider>
+          </Card>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#ECE7E2] py-12">
@@ -387,7 +433,7 @@ export default function ShareYourIdea() {
               </Card>
 
               {/* 2 — Service */}
-              <Card className="space-y-6 p-6 sm:p-8">
+              <Card id="service-selection-section" className="space-y-6 p-6 sm:p-8">
                 <SectionHeader number="2" title="Elige un servicio" />
                 {products.length === 0 ? (
                   <p className="text-sm text-[#6f7863]">Cargando servicios…</p>
@@ -408,7 +454,7 @@ export default function ShareYourIdea() {
               </Card>
 
               {/* 3 — Date & time */}
-              <Card className="space-y-5 p-6 sm:p-8">
+              <Card id="time-selection-section" className="space-y-5 p-6 sm:p-8">
                 <SectionHeader number="3" title="Date & time" />
                 <Field label="Preferred date" error={formErrors.selected_date}>
                   <input

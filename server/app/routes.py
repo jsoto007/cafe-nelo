@@ -519,8 +519,8 @@ def create_stripe_checkout_session(
     base_url = _public_client_base_url()
     checkout = _stripe_client().checkout.Session.create(
         mode="payment",
-        success_url=f"{base_url}/booking/confirmation?appointment_id={appointment.id}&session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{base_url}/share-your-idea?appointment_id={appointment.id}&payment=cancelled",
+        ui_mode="embedded",
+        return_url=f"{base_url}/booking/confirmation?appointment_id={appointment.id}&session_id={{CHECKOUT_SESSION_ID}}",
         client_reference_id=str(appointment.id),
         customer_email=contact_email or None,
         payment_intent_data={
@@ -4340,6 +4340,7 @@ def create_appointment():
             "requires_payment": requires_payment,
             "checkout_url": checkout_url,
             "checkout_session_id": checkout_session_id,
+            "checkout_client_secret": checkout_session.get("client_secret") if checkout_session else None,
         }
     ), 201
 
