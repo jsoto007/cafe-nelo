@@ -75,7 +75,7 @@ export default function Policies() {
 
         <div className="space-y-6 text-xs uppercase tracking-[0.3em] text-gray-500">
           <p>MELODI NAILS</p>
-          <p>Brooklyn, NY · November, 2025</p>
+          <p>Bronx, NY · November, 2025</p>
         </div>
 
         <section className="space-y-4">

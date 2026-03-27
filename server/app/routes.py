@@ -4551,13 +4551,23 @@ def initiate_stripe_booking():
         expires_at=datetime.utcnow() + timedelta(hours=2),
     )
     db.session.add(draft)
-    db.session.flush()
+    try:
+        db.session.flush()
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Unable to persist booking draft before Stripe checkout creation.")
+        return jsonify({"error": "Unable to start booking right now. Please try again soon."}), 503
 
     try:
         checkout = _create_stripe_checkout_for_draft(draft, email)
     except stripe.error.StripeError as exc:
         db.session.rollback()
+        current_app.logger.warning("Stripe checkout creation failed: %s", exc)
         return jsonify({"error": str(exc)}), 503
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Unexpected error while creating Stripe checkout session.")
+        return jsonify({"error": "Unable to start checkout right now. Please try again soon."}), 503
 
     draft.stripe_session_id = checkout.get("id")
 
@@ -4565,6 +4575,7 @@ def initiate_stripe_booking():
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
+        current_app.logger.exception("Unable to save Stripe checkout session %s for booking draft %s.", draft.stripe_session_id, draft.id)
         return jsonify({"error": "Unable to initiate booking. Please try again."}), 500
 
     return jsonify({"checkout_client_secret": checkout.get("client_secret")}), 200
