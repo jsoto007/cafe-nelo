@@ -1,4 +1,9 @@
 const STATUS_META = {
+  awaiting_payment: {
+    label: 'Awaiting payment',
+    badgeClasses:
+      'bg-sky-50 text-sky-800 ring-sky-600/20',
+  },
   pending: {
     label: 'Pending review',
     badgeClasses:
@@ -33,6 +38,16 @@ const STATUS_META = {
     label: 'No show',
     badgeClasses:
       'bg-slate-50 text-slate-900 ring-slate-400/60',
+  },
+  payment_failed: {
+    label: 'Payment failed',
+    badgeClasses:
+      'bg-rose-50 text-rose-800 ring-rose-600/20',
+  },
+  payment_expired: {
+    label: 'Payment expired',
+    badgeClasses:
+      'bg-rose-50 text-rose-800 ring-rose-600/20',
   },
   default: {
     label: 'Scheduled',

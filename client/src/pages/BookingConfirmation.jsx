@@ -145,6 +145,11 @@ export default function BookingConfirmation() {
           if (!isActive) {
             return;
           }
+          const fallbackAppointment = error.body?.appointment ?? null;
+          if (fallbackAppointment) {
+            setRemoteAppointment(fallbackAppointment);
+            storeLatestAppointment(fallbackAppointment);
+          }
           setFetchError(error.message || 'Unable to verify Stripe payment.');
           setIsFetchingRemote(false);
         });
@@ -249,6 +254,18 @@ export default function BookingConfirmation() {
     bookingDetails?.assigned_admin?.email || bookingDetails?.assigned_admin?.contact_email || '';
   const statusLabel = formatStatusLabel(bookingDetails?.status);
   const statusClasses = getStatusBadgeClasses(bookingDetails?.status);
+  const isPaymentAwaiting = bookingDetails?.status === 'awaiting_payment';
+  const isPaymentFailed = bookingDetails?.status === 'payment_failed' || bookingDetails?.status === 'payment_expired';
+  const confirmationTitle = isPaymentAwaiting
+    ? 'Payment still processing'
+    : isPaymentFailed
+      ? 'Payment was not completed'
+      : 'Appointment confirmed';
+  const confirmationDescription = isPaymentAwaiting
+    ? 'Your time is on a temporary hold while Stripe finishes processing payment. We will only confirm the appointment after payment succeeds.'
+    : isPaymentFailed
+      ? 'Stripe did not confirm payment, so this appointment was not booked. Start a new checkout to reserve a time.'
+      : 'Thanks for securing your appointment. We emailed a confirmation with calendar invites—check your inbox or spam folder.';
   const depositSecondary = payment?.receipt_url ? (
     <a
       href={payment.receipt_url}
@@ -267,14 +284,18 @@ export default function BookingConfirmation() {
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4">
         <FadeIn>
           <SectionTitle
-            eyebrow="Booked"
-            title="Appointment confirmed"
-            description="Thanks for securing your appointment. We emailed a confirmation with calendar invites—check your inbox or spam folder."
+            eyebrow={isPaymentFailed ? 'Payment issue' : isPaymentAwaiting ? 'Processing' : 'Booked'}
+            title={confirmationTitle}
+            description={confirmationDescription}
           />
         </FadeIn>
         <FadeIn>
           <p className="text-sm text-gray-600">
-            If you don’t see the email, double-check your spam or promotions folder and look for an email from <span className="font-semibold">melodinails@mail.sotodev.com</span>. The confirmation includes Google and Apple calendar options so you can lock in the time.
+            {isPaymentAwaiting
+              ? 'Keep this page open for a moment while we verify the Stripe session. If payment does not complete, the temporary hold will expire and the appointment will not be booked.'
+              : isPaymentFailed
+                ? 'If Stripe charged your card but this page still shows a failed payment, verify the Stripe receipt first and then review the webhook logs before manually creating or confirming an appointment.'
+                : <>If you don’t see the email, double-check your spam or promotions folder and look for an email from <span className="font-semibold">melodinails@mail.sotodev.com</span>. The confirmation includes Google and Apple calendar options so you can lock in the time.</>}
           </p>
         </FadeIn>
 

@@ -136,6 +136,7 @@ DEFAULT_HOURLY_RATE_CENTS = 20000
 BOOKING_FEE_SETTING_KEY = "booking_fee_percent"
 DEFAULT_BOOKING_FEE_PERCENT = 20
 MINIMUM_BOOKING_FEE_PERCENT = 20
+PAYMENT_HOLD_TTL = timedelta(minutes=30)
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -144,7 +145,15 @@ UPLOAD_RATE_LIMIT_MESSAGE = "Too many uploads. Please wait a moment and try agai
 
 DAY_TO_INDEX = {day: index for index, day in enumerate(WEEK_DAYS)}
 INDEX_TO_DAY = {index: day for day, index in DAY_TO_INDEX.items()}
-NON_BLOCKING_APPOINTMENT_STATUSES = {"cancelled", "cancelled_by_client", "declined", "no_show"}
+NON_BLOCKING_APPOINTMENT_STATUSES = {
+    "awaiting_payment",
+    "cancelled",
+    "cancelled_by_client",
+    "declined",
+    "no_show",
+    "payment_failed",
+    "payment_expired",
+}
 DEFAULT_SLOT_INTERVAL_MINUTES = 60
 MINIMUM_APPOINTMENT_DURATION_MINUTES = 60
 
@@ -194,6 +203,10 @@ class StripePaymentError(Exception):
 
 
 class StripePaymentPendingError(StripePaymentError):
+    pass
+
+
+class StripePaymentTerminalError(StripePaymentError):
     pass
 
 
@@ -863,6 +876,42 @@ def load_booking_fee_percent() -> int:
     return max(value, MINIMUM_BOOKING_FEE_PERCENT)
 
 
+def _payment_hold_expires_at(appointment: TattooAppointment | None) -> datetime | None:
+    if not appointment or appointment.status != "awaiting_payment":
+        return None
+    created_at = appointment.created_at or appointment.updated_at
+    if not created_at:
+        return None
+    return created_at + PAYMENT_HOLD_TTL
+
+
+def _is_payment_hold_active(appointment: TattooAppointment | None, *, now: datetime | None = None) -> bool:
+    expires_at = _payment_hold_expires_at(appointment)
+    if not expires_at:
+        return False
+    current_time = now or datetime.utcnow()
+    return current_time < expires_at
+
+
+def _appointment_blocks_availability(
+    appointment_status: str | None,
+    *,
+    appointment_created_at: datetime | None = None,
+    appointment_updated_at: datetime | None = None,
+    now: datetime | None = None,
+) -> bool:
+    normalized_status = (appointment_status or "").strip().lower()
+    if normalized_status in NON_BLOCKING_APPOINTMENT_STATUSES:
+        if normalized_status != "awaiting_payment":
+            return False
+        probe = type("PaymentHold", (), {})()
+        probe.status = normalized_status
+        probe.created_at = appointment_created_at
+        probe.updated_at = appointment_updated_at
+        return _is_payment_hold_active(probe, now=now)
+    return True
+
+
 def sync_checkout_payment_for_appointment(
     appointment: TattooAppointment,
     checkout_session_id: str | None,
@@ -920,7 +969,9 @@ def sync_checkout_payment_for_appointment(
         if checkout_status == "expired" or payment_intent_status in {"canceled", "requires_payment_method"}:
             if existing_payment:
                 existing_payment.status = "failed"
-            raise StripePaymentError("Stripe payment was not completed.")
+            if appointment.status == "awaiting_payment":
+                appointment.status = "payment_expired" if checkout_status == "expired" else "payment_failed"
+            raise StripePaymentTerminalError("Stripe payment was not completed.")
         raise StripePaymentPendingError("Stripe payment is still processing.")
 
     amount_total = int(checkout.get("amount_total") or 0)
@@ -1687,31 +1738,37 @@ def _slot_overlaps(start: datetime, end: datetime, intervals):
 def collect_blocked_intervals(day_start: datetime, day_end: datetime, *, ignore_appointment_id: int | None = None):
     intervals = []
 
-    non_blocking_statuses = tuple(NON_BLOCKING_APPOINTMENT_STATUSES)
-
     appointment_query = TattooAppointment.query.with_entities(
         TattooAppointment.id,
         TattooAppointment.scheduled_start,
         TattooAppointment.duration_minutes,
+        TattooAppointment.status,
+        TattooAppointment.created_at,
+        TattooAppointment.updated_at,
     ).filter(
         TattooAppointment.scheduled_start.isnot(None),
         TattooAppointment.duration_minutes.isnot(None),
         TattooAppointment.scheduled_start < day_end,
     )
 
-    if non_blocking_statuses:
-        appointment_query = appointment_query.filter(TattooAppointment.status.notin_(non_blocking_statuses))
-
     if ignore_appointment_id is not None:
         appointment_query = appointment_query.filter(TattooAppointment.id != ignore_appointment_id)
 
     lookback_start = day_start - timedelta(hours=12)
     appointment_query = appointment_query.filter(TattooAppointment.scheduled_start >= lookback_start)
+    now = datetime.utcnow()
 
-    for _, start, duration_minutes in appointment_query:
+    for _, start, duration_minutes, status, created_at, updated_at in appointment_query:
         if not start or duration_minutes is None:
             continue
         if duration_minutes <= 0:
+            continue
+        if not _appointment_blocks_availability(
+            status,
+            appointment_created_at=created_at,
+            appointment_updated_at=updated_at,
+            now=now,
+        ):
             continue
         end = start + timedelta(minutes=duration_minutes)
         if end <= day_start or start >= day_end:
@@ -4375,6 +4432,23 @@ def verify_stripe_checkout_session():
                 }
             ),
             202,
+        )
+    except StripePaymentTerminalError as exc:
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            return jsonify({"error": "Unable to record payment failure right now."}), 500
+        appointment = _load_appointment_for_payment(appointment_id)
+        return (
+            jsonify(
+                {
+                    "appointment": serialize_appointment(appointment) if appointment else None,
+                    "payment_status": "failed",
+                    "error": str(exc),
+                }
+            ),
+            400,
         )
     except StripePaymentError as exc:
         db.session.rollback()

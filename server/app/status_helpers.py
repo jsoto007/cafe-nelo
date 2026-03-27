@@ -5,6 +5,7 @@ import re
 DEFAULT_STATUS_LABEL = "Scheduled"
 
 _STATUS_LABEL_OVERRIDES = {
+    "awaiting_payment": "Awaiting payment",
     "pending": "Pending review",
     "confirmed": "Confirmed",
     "completed": "Completed",
@@ -12,6 +13,8 @@ _STATUS_LABEL_OVERRIDES = {
     "cancelled_by_client": "Cancelled by client",
     "declined": "Declined",
     "no_show": "No show",
+    "payment_failed": "Payment failed",
+    "payment_expired": "Payment expired",
 }
 
 

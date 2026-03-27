@@ -1,5 +1,6 @@
 import json
 import sys
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -162,3 +163,53 @@ def test_stripe_webhook_finalizes_payment_once(app, client, monkeypatch):
 
     assert notifications["client"] == 1
     assert notifications["internal"] == 1
+
+
+def test_verify_session_marks_failed_payment_as_not_booked(app, client, monkeypatch):
+    with app.app_context():
+        appointment = _create_appointment()
+        appointment_id = appointment.id
+
+    fake_checkout = {
+        "id": "cs_test_123",
+        "client_reference_id": str(appointment_id),
+        "payment_status": "unpaid",
+        "status": "expired",
+        "payment_intent": "pi_test_123",
+        "amount_total": 95,
+        "currency": "usd",
+    }
+    fake_payment_intent = FakeStripeObject(status="requires_payment_method", charges=SimpleNamespace(data=[]))
+
+    monkeypatch.setattr("app.routes.stripe.checkout.Session.retrieve", lambda session_id: fake_checkout)
+    monkeypatch.setattr("app.routes.stripe.PaymentIntent.retrieve", lambda payment_intent_id: fake_payment_intent)
+
+    response = client.post(
+        "/api/payments/stripe/verify-session",
+        json={"appointment_id": appointment_id, "session_id": "cs_test_123"},
+        headers=_set_csrf(client),
+    )
+
+    assert response.status_code == 400
+
+    with app.app_context():
+        appointment = TattooAppointment.query.get(appointment_id)
+        assert appointment.status == "payment_expired"
+        assert appointment.payments[0].status == "failed"
+
+
+def test_stale_awaiting_payment_hold_does_not_block_availability(app):
+    from app.routes import collect_blocked_intervals
+
+    with app.app_context():
+        appointment = _create_appointment()
+        appointment.scheduled_start = datetime.utcnow() + timedelta(days=1)
+        appointment.created_at = datetime.utcnow() - timedelta(hours=2)
+        appointment.updated_at = appointment.created_at
+        db.session.commit()
+
+        day_start = appointment.scheduled_start.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        intervals = collect_blocked_intervals(day_start, day_end)
+
+        assert intervals == []
