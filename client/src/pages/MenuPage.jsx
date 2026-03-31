@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import FadeIn from '../components/FadeIn.jsx';
-import menuData from '../data/menu.json';
+import { apiGet } from '../lib/api.js';
 
 const TAG_LABELS = {
   v: { label: 'Vegetarian', short: 'V', bg: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
@@ -27,7 +28,7 @@ function MenuItem({ item }) {
         <div className="flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-heading text-lg font-medium text-ts-charcoal">{item.name}</h3>
-            {item.tags?.map((t) => <Tag key={t} tagKey={t} />)}
+            {(item.tags || []).map((t) => <Tag key={t} tagKey={t} />)}
           </div>
           {item.description && (
             <p className="text-sm leading-relaxed text-ts-muted">{item.description}</p>
@@ -35,7 +36,7 @@ function MenuItem({ item }) {
         </div>
         {item.price != null ? (
           <span className="shrink-0 font-heading text-base font-medium text-ts-charcoal">
-            ${item.price}
+            ${Number(item.price).toFixed(2)}
           </span>
         ) : (
           <span className="shrink-0 text-[11px] uppercase tracking-[0.3em] text-ts-muted">
@@ -49,15 +50,18 @@ function MenuItem({ item }) {
 
 function MenuSection({ section }) {
   return (
-    <div id={section.category.toLowerCase()} className="scroll-mt-20">
+    <div id={section.name.toLowerCase().replace(/\s+/g, '-')} className="scroll-mt-20">
       <div className="mb-6 flex items-center gap-4">
         <h2 className="font-heading text-2xl font-medium text-ts-charcoal sm:text-3xl">
-          {section.category}
+          {section.name}
         </h2>
         <div className="h-px flex-1 bg-ts-stone" aria-hidden="true" />
       </div>
+      {section.description && (
+        <p className="mb-4 text-sm text-ts-muted">{section.description}</p>
+      )}
       <div>
-        {section.items.map((item) => (
+        {(section.items || []).map((item) => (
           <MenuItem key={item.id} item={item} />
         ))}
       </div>
@@ -66,6 +70,17 @@ function MenuSection({ section }) {
 }
 
 export default function MenuPage() {
+  const [menuData, setMenuData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    apiGet('/api/menu')
+      .then(setMenuData)
+      .catch((e) => setError(e.message || 'Failed to load menu.'))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <>
       {/* Page header */}
@@ -82,42 +97,55 @@ export default function MenuPage() {
       </div>
 
       <main className="mx-auto max-w-3xl px-6 py-16">
-        {/* Category jump links */}
-        <nav
-          className="mb-12 flex flex-wrap gap-2"
-          aria-label="Jump to menu section"
-        >
-          {menuData.map((section) => (
-            <a
-              key={section.category}
-              href={`#${section.category.toLowerCase()}`}
-              className="rounded-full border border-ts-stone px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-ts-muted transition hover:border-ts-crimson hover:text-ts-crimson"
-            >
-              {section.category}
-            </a>
-          ))}
-        </nav>
+        {loading && (
+          <p className="py-12 text-center text-sm text-ts-muted">Loading menu…</p>
+        )}
 
-        {/* Menu sections */}
-        <FadeIn className="space-y-14" delayStep={0.1}>
-          {menuData.map((section) => (
-            <MenuSection key={section.category} section={section} />
-          ))}
-        </FadeIn>
+        {error && (
+          <p className="py-12 text-center text-sm text-ts-muted">{error}</p>
+        )}
 
-        {/* Legend */}
-        <div className="mt-14 border-t border-ts-stone pt-8">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.4em] text-ts-muted">
-            Key
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(TAG_LABELS).map(([key, tag]) => (
-              <span key={key} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold ring-1 ${tag.bg}`}>
-                {tag.short} {tag.label}
-              </span>
-            ))}
-          </div>
-        </div>
+        {!loading && !error && menuData.length === 0 && (
+          <p className="py-12 text-center text-sm text-ts-muted">Menu coming soon.</p>
+        )}
+
+        {!loading && menuData.length > 0 && (
+          <>
+            {/* Category jump links */}
+            <nav className="mb-12 flex flex-wrap gap-2" aria-label="Jump to menu section">
+              {menuData.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="rounded-full border border-ts-stone px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-ts-muted transition hover:border-ts-crimson hover:text-ts-crimson"
+                >
+                  {section.name}
+                </a>
+              ))}
+            </nav>
+
+            {/* Menu sections */}
+            <FadeIn className="space-y-14" delayStep={0.1}>
+              {menuData.map((section) => (
+                <MenuSection key={section.id} section={section} />
+              ))}
+            </FadeIn>
+
+            {/* Legend */}
+            <div className="mt-14 border-t border-ts-stone pt-8">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.4em] text-ts-muted">
+                Key
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(TAG_LABELS).map(([key, tag]) => (
+                  <span key={key} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold ring-1 ${tag.bg}`}>
+                    {tag.short} {tag.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Reservation CTA */}
         <div className="mt-12 rounded-2xl bg-ts-charcoal p-8 text-center">

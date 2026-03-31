@@ -51,7 +51,11 @@ from .models import (
     EmailVerificationToken,
     ClientDocument,
     Consultation,
+    DailySpecialItem,
+    DailySpecialSection,
     GalleryItem,
+    MenuCategory,
+    MenuItem,
     SystemSetting,
     StudioAvailabilityBlock,
     StudioClosure,
@@ -5278,5 +5282,571 @@ def contact_private_events():
     admin_email = current_app.config.get("ADMIN_EMAIL") or current_app.config.get("MAILGUN_FROM")
     if admin_email:
         mailgun_send(to=admin_email, subject=subject, text=text_body, tags=("private-events",))
+    return jsonify({"status": "ok"})
+
+
+# ---------------------------------------------------------------------------
+# Menu — helpers
+# ---------------------------------------------------------------------------
+
+
+def serialize_menu_category(cat, include_items=True):
+    data = {
+        "id": cat.id,
+        "name": cat.name,
+        "description": cat.description,
+        "display_order": cat.display_order,
+        "is_visible": cat.is_visible,
+        "created_at": cat.created_at.isoformat() if cat.created_at else None,
+        "updated_at": cat.updated_at.isoformat() if cat.updated_at else None,
+    }
+    if include_items:
+        data["items"] = [serialize_menu_item(i) for i in cat.items]
+    return data
+
+
+def serialize_menu_item(item):
+    tags = []
+    if item.tags:
+        try:
+            tags = json.loads(item.tags)
+        except (ValueError, TypeError):
+            tags = []
+    return {
+        "id": item.id,
+        "category_id": item.category_id,
+        "name": item.name,
+        "description": item.description,
+        "price": item.price_cents / 100 if item.price_cents is not None else None,
+        "price_cents": item.price_cents,
+        "tags": tags,
+        "display_order": item.display_order,
+        "is_visible": item.is_visible,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+    }
+
+
+def serialize_special_section(section, include_items=True):
+    data = {
+        "id": section.id,
+        "course": section.course,
+        "display_order": section.display_order,
+        "is_visible": section.is_visible,
+        "created_at": section.created_at.isoformat() if section.created_at else None,
+        "updated_at": section.updated_at.isoformat() if section.updated_at else None,
+    }
+    if include_items:
+        data["items"] = [serialize_special_item(i) for i in section.items]
+    return data
+
+
+def serialize_special_item(item):
+    return {
+        "id": item.id,
+        "section_id": item.section_id,
+        "name": item.name,
+        "description": item.description,
+        "price": item.price_cents / 100 if item.price_cents is not None else None,
+        "price_cents": item.price_cents,
+        "display_order": item.display_order,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Menu — public endpoints
+# ---------------------------------------------------------------------------
+
+
+@api_bp.route("/api/menu", methods=["GET"])
+def public_get_menu():
+    """Return all visible categories with their visible items, ordered."""
+    categories = (
+        MenuCategory.query
+        .filter_by(is_visible=True)
+        .order_by(MenuCategory.display_order.asc(), MenuCategory.id.asc())
+        .all()
+    )
+    result = []
+    for cat in categories:
+        visible_items = [i for i in cat.items if i.is_visible]
+        data = serialize_menu_category(cat, include_items=False)
+        data["items"] = [serialize_menu_item(i) for i in visible_items]
+        result.append(data)
+    return jsonify(result)
+
+
+@api_bp.route("/api/specials", methods=["GET"])
+def public_get_specials():
+    """Return all visible special sections with their items, ordered."""
+    sections = (
+        DailySpecialSection.query
+        .filter_by(is_visible=True)
+        .order_by(DailySpecialSection.display_order.asc(), DailySpecialSection.id.asc())
+        .all()
+    )
+    result = []
+    for section in sections:
+        data = serialize_special_section(section, include_items=False)
+        data["items"] = [serialize_special_item(i) for i in section.items]
+        result.append(data)
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
+# Menu — admin endpoints
+# ---------------------------------------------------------------------------
+
+
+@api_bp.route("/api/admin/menu/categories", methods=["GET"])
+@admin_required
+def admin_list_menu_categories():
+    categories = (
+        MenuCategory.query
+        .order_by(MenuCategory.display_order.asc(), MenuCategory.id.asc())
+        .all()
+    )
+    return jsonify([serialize_menu_category(c) for c in categories])
+
+
+@api_bp.route("/api/admin/menu/categories", methods=["POST"])
+@admin_required
+def admin_create_menu_category():
+    payload = request.get_json(silent=True) or {}
+    name = (payload.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required."}), 400
+    description = (payload.get("description") or "").strip() or None
+    is_visible = parse_bool(payload.get("is_visible"), default=True)
+
+    max_order = db.session.query(db.func.max(MenuCategory.display_order)).scalar() or 0
+    cat = MenuCategory(
+        name=name,
+        description=description,
+        display_order=max_order + 1,
+        is_visible=is_visible,
+    )
+    db.session.add(cat)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_menu_category(cat)), 201
+
+
+@api_bp.route("/api/admin/menu/categories/<int:category_id>", methods=["PATCH"])
+@admin_required
+def admin_update_menu_category(category_id):
+    cat = MenuCategory.query.get(category_id)
+    if not cat:
+        return jsonify({"error": "Category not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    if "name" in payload:
+        name = (payload["name"] or "").strip()
+        if not name:
+            return jsonify({"error": "name cannot be blank."}), 400
+        cat.name = name
+    if "description" in payload:
+        cat.description = (payload["description"] or "").strip() or None
+    if "is_visible" in payload:
+        cat.is_visible = parse_bool(payload["is_visible"], default=cat.is_visible)
+    if "display_order" in payload:
+        try:
+            cat.display_order = int(payload["display_order"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "display_order must be an integer."}), 400
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_menu_category(cat))
+
+
+@api_bp.route("/api/admin/menu/categories/<int:category_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_menu_category(category_id):
+    cat = MenuCategory.query.get(category_id)
+    if not cat:
+        return jsonify({"error": "Category not found."}), 404
+    db.session.delete(cat)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return "", 204
+
+
+@api_bp.route("/api/admin/menu/categories/reorder", methods=["PATCH"])
+@admin_required
+def admin_reorder_menu_categories():
+    """Accepts [{id, display_order}, ...] and bulk-updates positions."""
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") or []
+    if not isinstance(items, list):
+        return jsonify({"error": "items must be an array."}), 400
+    for entry in items:
+        cat_id = entry.get("id")
+        order = entry.get("display_order")
+        if cat_id is None or order is None:
+            continue
+        MenuCategory.query.filter_by(id=cat_id).update({"display_order": int(order)})
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify({"status": "ok"})
+
+
+@api_bp.route("/api/admin/menu/items", methods=["POST"])
+@admin_required
+def admin_create_menu_item():
+    payload = request.get_json(silent=True) or {}
+    name = (payload.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required."}), 400
+    category_id = payload.get("category_id")
+    if not category_id or not MenuCategory.query.get(category_id):
+        return jsonify({"error": "Valid category_id is required."}), 400
+    description = (payload.get("description") or "").strip() or None
+    price_raw = payload.get("price_cents")
+    price_cents = None
+    if price_raw is not None and price_raw != "":
+        try:
+            price_cents = int(price_raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "price_cents must be an integer."}), 400
+    tags_raw = payload.get("tags") or []
+    if not isinstance(tags_raw, list):
+        return jsonify({"error": "tags must be an array."}), 400
+    is_visible = parse_bool(payload.get("is_visible"), default=True)
+    max_order = (
+        db.session.query(db.func.max(MenuItem.display_order))
+        .filter_by(category_id=category_id)
+        .scalar() or 0
+    )
+    item = MenuItem(
+        category_id=category_id,
+        name=name,
+        description=description,
+        price_cents=price_cents,
+        tags=json.dumps(tags_raw),
+        display_order=max_order + 1,
+        is_visible=is_visible,
+    )
+    db.session.add(item)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_menu_item(item)), 201
+
+
+@api_bp.route("/api/admin/menu/items/<int:item_id>", methods=["PATCH"])
+@admin_required
+def admin_update_menu_item(item_id):
+    item = MenuItem.query.get(item_id)
+    if not item:
+        return jsonify({"error": "Item not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    if "name" in payload:
+        name = (payload["name"] or "").strip()
+        if not name:
+            return jsonify({"error": "name cannot be blank."}), 400
+        item.name = name
+    if "description" in payload:
+        item.description = (payload["description"] or "").strip() or None
+    if "price_cents" in payload:
+        raw = payload["price_cents"]
+        if raw is None or raw == "":
+            item.price_cents = None
+        else:
+            try:
+                item.price_cents = int(raw)
+            except (TypeError, ValueError):
+                return jsonify({"error": "price_cents must be an integer."}), 400
+    if "tags" in payload:
+        tags_raw = payload["tags"]
+        if not isinstance(tags_raw, list):
+            return jsonify({"error": "tags must be an array."}), 400
+        item.tags = json.dumps(tags_raw)
+    if "is_visible" in payload:
+        item.is_visible = parse_bool(payload["is_visible"], default=item.is_visible)
+    if "display_order" in payload:
+        try:
+            item.display_order = int(payload["display_order"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "display_order must be an integer."}), 400
+    if "category_id" in payload:
+        cat = MenuCategory.query.get(payload["category_id"])
+        if not cat:
+            return jsonify({"error": "Category not found."}), 404
+        item.category_id = cat.id
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_menu_item(item))
+
+
+@api_bp.route("/api/admin/menu/items/<int:item_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_menu_item(item_id):
+    item = MenuItem.query.get(item_id)
+    if not item:
+        return jsonify({"error": "Item not found."}), 404
+    db.session.delete(item)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return "", 204
+
+
+@api_bp.route("/api/admin/menu/items/reorder", methods=["PATCH"])
+@admin_required
+def admin_reorder_menu_items():
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") or []
+    if not isinstance(items, list):
+        return jsonify({"error": "items must be an array."}), 400
+    for entry in items:
+        item_id = entry.get("id")
+        order = entry.get("display_order")
+        if item_id is None or order is None:
+            continue
+        MenuItem.query.filter_by(id=item_id).update({"display_order": int(order)})
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify({"status": "ok"})
+
+
+# ---------------------------------------------------------------------------
+# Daily Specials — admin endpoints
+# ---------------------------------------------------------------------------
+
+
+@api_bp.route("/api/admin/specials", methods=["GET"])
+@admin_required
+def admin_list_specials():
+    sections = (
+        DailySpecialSection.query
+        .order_by(DailySpecialSection.display_order.asc(), DailySpecialSection.id.asc())
+        .all()
+    )
+    return jsonify([serialize_special_section(s) for s in sections])
+
+
+@api_bp.route("/api/admin/specials", methods=["POST"])
+@admin_required
+def admin_create_special_section():
+    payload = request.get_json(silent=True) or {}
+    course = (payload.get("course") or "").strip()
+    if not course:
+        return jsonify({"error": "course is required."}), 400
+    is_visible = parse_bool(payload.get("is_visible"), default=True)
+    max_order = db.session.query(db.func.max(DailySpecialSection.display_order)).scalar() or 0
+    section = DailySpecialSection(
+        course=course,
+        display_order=max_order + 1,
+        is_visible=is_visible,
+    )
+    db.session.add(section)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_special_section(section)), 201
+
+
+@api_bp.route("/api/admin/specials/<int:section_id>", methods=["PATCH"])
+@admin_required
+def admin_update_special_section(section_id):
+    section = DailySpecialSection.query.get(section_id)
+    if not section:
+        return jsonify({"error": "Section not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    if "course" in payload:
+        course = (payload["course"] or "").strip()
+        if not course:
+            return jsonify({"error": "course cannot be blank."}), 400
+        section.course = course
+    if "is_visible" in payload:
+        section.is_visible = parse_bool(payload["is_visible"], default=section.is_visible)
+    if "display_order" in payload:
+        try:
+            section.display_order = int(payload["display_order"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "display_order must be an integer."}), 400
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_special_section(section))
+
+
+@api_bp.route("/api/admin/specials/<int:section_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_special_section(section_id):
+    section = DailySpecialSection.query.get(section_id)
+    if not section:
+        return jsonify({"error": "Section not found."}), 404
+    db.session.delete(section)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return "", 204
+
+
+@api_bp.route("/api/admin/specials/reorder", methods=["PATCH"])
+@admin_required
+def admin_reorder_special_sections():
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") or []
+    if not isinstance(items, list):
+        return jsonify({"error": "items must be an array."}), 400
+    for entry in items:
+        sec_id = entry.get("id")
+        order = entry.get("display_order")
+        if sec_id is None or order is None:
+            continue
+        DailySpecialSection.query.filter_by(id=sec_id).update({"display_order": int(order)})
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify({"status": "ok"})
+
+
+@api_bp.route("/api/admin/specials/<int:section_id>/items", methods=["POST"])
+@admin_required
+def admin_create_special_item(section_id):
+    section = DailySpecialSection.query.get(section_id)
+    if not section:
+        return jsonify({"error": "Section not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    name = (payload.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required."}), 400
+    description = (payload.get("description") or "").strip() or None
+    price_raw = payload.get("price_cents")
+    price_cents = None
+    if price_raw is not None and price_raw != "":
+        try:
+            price_cents = int(price_raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "price_cents must be an integer."}), 400
+    max_order = (
+        db.session.query(db.func.max(DailySpecialItem.display_order))
+        .filter_by(section_id=section_id)
+        .scalar() or 0
+    )
+    item = DailySpecialItem(
+        section_id=section_id,
+        name=name,
+        description=description,
+        price_cents=price_cents,
+        display_order=max_order + 1,
+    )
+    db.session.add(item)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_special_item(item)), 201
+
+
+@api_bp.route("/api/admin/specials/<int:section_id>/items/<int:item_id>", methods=["PATCH"])
+@admin_required
+def admin_update_special_item(section_id, item_id):
+    item = DailySpecialItem.query.filter_by(id=item_id, section_id=section_id).first()
+    if not item:
+        return jsonify({"error": "Item not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    if "name" in payload:
+        name = (payload["name"] or "").strip()
+        if not name:
+            return jsonify({"error": "name cannot be blank."}), 400
+        item.name = name
+    if "description" in payload:
+        item.description = (payload["description"] or "").strip() or None
+    if "price_cents" in payload:
+        raw = payload["price_cents"]
+        if raw is None or raw == "":
+            item.price_cents = None
+        else:
+            try:
+                item.price_cents = int(raw)
+            except (TypeError, ValueError):
+                return jsonify({"error": "price_cents must be an integer."}), 400
+    if "display_order" in payload:
+        try:
+            item.display_order = int(payload["display_order"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "display_order must be an integer."}), 400
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_special_item(item))
+
+
+@api_bp.route("/api/admin/specials/<int:section_id>/items/<int:item_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_special_item(section_id, item_id):
+    item = DailySpecialItem.query.filter_by(id=item_id, section_id=section_id).first()
+    if not item:
+        return jsonify({"error": "Item not found."}), 404
+    db.session.delete(item)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return "", 204
+
+
+@api_bp.route("/api/admin/specials/<int:section_id>/items/reorder", methods=["PATCH"])
+@admin_required
+def admin_reorder_special_items(section_id):
+    section = DailySpecialSection.query.get(section_id)
+    if not section:
+        return jsonify({"error": "Section not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") or []
+    if not isinstance(items, list):
+        return jsonify({"error": "items must be an array."}), 400
+    for entry in items:
+        item_id = entry.get("id")
+        order = entry.get("display_order")
+        if item_id is None or order is None:
+            continue
+        DailySpecialItem.query.filter_by(id=item_id, section_id=section_id).update(
+            {"display_order": int(order)}
+        )
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify({"status": "ok"})
 
     return jsonify({"status": "received"}), 200

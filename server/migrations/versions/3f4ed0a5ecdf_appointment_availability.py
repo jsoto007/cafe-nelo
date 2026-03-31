@@ -62,7 +62,7 @@ def upgrade() -> None:
             sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
             sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
             sa.Column("weekday", sa.Integer(), nullable=False),
-            sa.Column("is_open", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+            sa.Column("is_open", sa.Boolean(), nullable=False, server_default=sa.text("TRUE")),
             sa.Column("opens_at", sa.Time(), nullable=False),
             sa.Column("closes_at", sa.Time(), nullable=False),
             sa.PrimaryKeyConstraint("id"),

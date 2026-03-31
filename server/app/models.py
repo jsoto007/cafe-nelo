@@ -586,6 +586,75 @@ class BookingDraft(db.Model):
     )
 
 
+class MenuCategory(TimestampMixin, db.Model):
+    __tablename__ = "menu_categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    is_visible = db.Column(db.Boolean, nullable=False, default=True)
+
+    items = db.relationship(
+        "MenuItem",
+        back_populates="category",
+        cascade="all, delete-orphan",
+        order_by="MenuItem.display_order",
+    )
+
+
+class MenuItem(TimestampMixin, db.Model):
+    __tablename__ = "menu_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(
+        db.Integer,
+        db.ForeignKey("menu_categories.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    price_cents = db.Column(db.Integer)  # None = "ask server"
+    tags = db.Column(db.Text)  # JSON array e.g. '["v","gf"]'
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    is_visible = db.Column(db.Boolean, nullable=False, default=True)
+
+    category = db.relationship("MenuCategory", back_populates="items")
+
+
+class DailySpecialSection(TimestampMixin, db.Model):
+    __tablename__ = "daily_special_sections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    course = db.Column(db.String(120), nullable=False)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    is_visible = db.Column(db.Boolean, nullable=False, default=True)
+
+    items = db.relationship(
+        "DailySpecialItem",
+        back_populates="section",
+        cascade="all, delete-orphan",
+        order_by="DailySpecialItem.display_order",
+    )
+
+
+class DailySpecialItem(TimestampMixin, db.Model):
+    __tablename__ = "daily_special_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    section_id = db.Column(
+        db.Integer,
+        db.ForeignKey("daily_special_sections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    price_cents = db.Column(db.Integer)  # None = no price shown
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+
+    section = db.relationship("DailySpecialSection", back_populates="items")
+
+
 class StudioClosure(TimestampMixin, db.Model):
     __tablename__ = "studio_closures"
 

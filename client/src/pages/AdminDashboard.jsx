@@ -5,7 +5,9 @@ import NoticeBanner from '../components/NoticeBanner.jsx';
 import SectionTitle from '../components/SectionTitle.jsx';
 import AdminCalendar from './admin/AdminCalendar.jsx';
 import AdminGallery from './admin/AdminGallery.jsx';
+import AdminMenu from './admin/AdminMenu.jsx';
 import AdminSettings from './admin/AdminSettings.jsx';
+import AdminSpecials from './admin/AdminSpecials.jsx';
 import AppointmentDetails from './admin/AppointmentDetails.jsx';
 import AdminUserDetails from './admin/AdminUserDetails.jsx';
 import { AdminDashboardProvider, useAdminDashboard, getAdminResourcesForPath } from './admin/AdminDashboardContext.jsx';
@@ -51,6 +53,7 @@ function AdminDashboardContent() {
           </div>
         </div>
 
+
         {notices.length ? (
           <div className="space-y-3">
             {notices.map((notice) => (
@@ -77,6 +80,8 @@ function AdminDashboardContent() {
           <Route path="calendar/:appointmentId" element={<AppointmentDetails />} />
           <Route path="user/:userId" element={<AdminUserDetails />} />
           <Route path="gallery" element={<AdminGallery />} />
+          <Route path="menu" element={<AdminMenu />} />
+          <Route path="specials" element={<AdminSpecials />} />
           <Route path="*" element={<Navigate to="settings" replace />} />
         </Routes>
       </FadeIn>

@@ -105,6 +105,17 @@ export default function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-5 text-[11px] text-ts-muted md:flex-row md:items-center md:justify-between">
         <span className="font-semibold uppercase tracking-[0.3em]">© {year} Tredici Social</span>
         <span>104 Kraft Ave · Bronxville, NY 10708</span>
+        <Link
+          to="/auth"
+          className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-ts-light-text/70 transition hover:border-white/40 hover:bg-white/10 hover:text-white"
+          aria-label="Staff login"
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="8" cy="5" r="3"/>
+            <path d="M1 14s1-4 7-4 7 4 7 4"/>
+          </svg>
+          Staff Portal
+        </Link>
       </div>
     </footer>
   );

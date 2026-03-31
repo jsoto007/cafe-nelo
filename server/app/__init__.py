@@ -122,6 +122,26 @@ def create_app():
 
         return error
 
+    @app.cli.command("create-admin")
+    @click.argument("name")
+    @click.argument("email")
+    @click.argument("password")
+    def create_admin(name, email, password):
+        """Create or update an admin account. Usage: flask create-admin NAME EMAIL PASSWORD"""
+        from .models import AdminAccount
+        existing = AdminAccount.query.filter_by(email=email).first()
+        if existing:
+            existing.name = name
+            existing.set_password(password)
+            db.session.commit()
+            click.echo(f"Admin account updated: {email}")
+        else:
+            admin = AdminAccount(name=name, email=email)
+            admin.set_password(password)
+            db.session.add(admin)
+            db.session.commit()
+            click.echo(f"Admin account created: {email}")
+
     @app.cli.command("optimize-uploads")
     @click.option("--max-edge", default=1600, show_default=True, type=int, help="Maximum image edge (px) when optimizing.")
     def optimize_uploads(max_edge: int):

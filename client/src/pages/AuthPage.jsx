@@ -31,8 +31,8 @@ export default function AuthPage() {
 
 
 
-  const heroTitle = 'Sign in to your Melodi Nails portal';
-  const heroDescription = 'View appointments, share inspiration, and manage your profile.';
+  const heroTitle = 'Tredici Social Staff Portal';
+  const heroDescription = 'Sign in to manage the menu, daily specials, and restaurant settings.';
 
   const handleLoginChange = (field) => (event) => {
     setLoginForm((prev) => ({
@@ -99,7 +99,7 @@ export default function AuthPage() {
                 Sign in
               </h2>
               <p className="text-xs uppercase tracking-[0.3em] text-gray-500">
-                Securely log in to manage your appointments and profile.
+                Securely log in to access the restaurant portal.
               </p>
             </div>
               <form className="space-y-4" onSubmit={handleLoginSubmit}>
@@ -149,7 +149,7 @@ export default function AuthPage() {
                 </div>
               </form>
         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-gray-500 mt-6">
-          Studio staff?{' '}
+          Admin?{' '}
           <Link to="/dashboard/admin" className="font-semibold text-gray-900 underline">
             Go to the Admin Console
           </Link>

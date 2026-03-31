@@ -14,5 +14,7 @@ export const USER_NAV_ITEMS = [
 export const ADMIN_NAV_ITEMS = [
   { label: 'Settings', to: '/dashboard/admin/settings', type: 'link' },
   { label: 'Calendar', to: '/dashboard/admin/calendar', type: 'link' },
-  { label: 'Gallery', to: '/dashboard/admin/gallery', type: 'link' }
+  { label: 'Gallery', to: '/dashboard/admin/gallery', type: 'link' },
+  { label: 'Menu', to: '/dashboard/admin/menu', type: 'link' },
+  { label: 'Specials', to: '/dashboard/admin/specials', type: 'link' },
 ];
