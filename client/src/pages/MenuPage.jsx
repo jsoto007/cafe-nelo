@@ -34,13 +34,9 @@ function MenuItem({ item }) {
             <p className="text-sm leading-relaxed text-ts-muted">{item.description}</p>
           )}
         </div>
-        {item.price != null ? (
+        {item.price != null && (
           <span className="shrink-0 font-heading text-base font-medium text-ts-charcoal">
             ${Number(item.price).toFixed(2)}
-          </span>
-        ) : (
-          <span className="shrink-0 text-[11px] uppercase tracking-[0.3em] text-ts-muted">
-            Ask server
           </span>
         )}
       </div>
