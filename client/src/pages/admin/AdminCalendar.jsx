@@ -250,26 +250,15 @@ function alignDurationInput(value) {
   return String(aligned);
 }
 
-function ensureMinimumDurationMinutes(value) {
-  const minutes = Number(value);
-  if (!Number.isFinite(minutes) || minutes <= 0) {
-    return SLOT_INTERVAL_MINUTES;
-  }
-  return Math.max(SLOT_INTERVAL_MINUTES, Math.ceil(minutes / SLOT_INTERVAL_MINUTES) * SLOT_INTERVAL_MINUTES);
-}
-
 function normaliseOperatingHours(hours) {
   const incoming = new Map();
   ensureArray(hours).forEach((entry) => {
     if (entry?.day) {
-      const durationMinutes = ensureMinimumDurationMinutes(entry.minimum_duration_minutes);
       incoming.set(entry.day, {
         day: entry.day,
         is_open: Boolean(entry.is_open),
         open_time: entry.open_time || '10:00',
-        close_time: entry.close_time || '18:00',
-        minimum_duration_minutes: durationMinutes,
-        minimum_duration_hours_input: String(durationMinutes / 60),
+        close_time: entry.close_time || '18:00'
       });
     }
   });
@@ -283,14 +272,11 @@ function normaliseOperatingHours(hours) {
         : day === 'sunday'
           ? { open_time: '10:00', close_time: '14:00', is_open: false }
           : { open_time: '10:00', close_time: '18:00', is_open: true };
-    const minutes = SLOT_INTERVAL_MINUTES;
     return {
       day,
       is_open: defaults.is_open ?? true,
       open_time: defaults.open_time,
-      close_time: defaults.close_time,
-      minimum_duration_minutes: minutes,
-      minimum_duration_hours_input: String(minutes / 60),
+      close_time: defaults.close_time
     };
   });
 }
@@ -788,10 +774,6 @@ export default function AdminCalendar() {
         if (field === 'is_open') {
           return { ...entry, is_open: value };
         }
-        if (field === 'minimum_duration_minutes') {
-          // Store the raw hours input as a string; we’ll normalize to minutes on save.
-          return { ...entry, minimum_duration_hours_input: value };
-        }
         return { ...entry, [field]: value };
       })
     );
@@ -869,17 +851,11 @@ export default function AdminCalendar() {
 
   const requestScheduleUpdate = () => {
     const normalizedOperatingHours = hoursDraft.map((entry) => {
-      const raw = entry.minimum_duration_hours_input;
-      const parsed = typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : NaN;
-      // Convert hours to minutes; enforce a minimum of SLOT_INTERVAL_MINUTES.
-      const minutesSource = Number.isFinite(parsed) && parsed > 0 ? parsed * SLOT_INTERVAL_MINUTES : entry.minimum_duration_minutes;
-      const finalMinutes = ensureMinimumDurationMinutes(minutesSource);
       return {
         day: entry.day,
         is_open: entry.is_open,
         open_time: entry.open_time,
-        close_time: entry.close_time,
-        minimum_duration_minutes: finalMinutes
+        close_time: entry.close_time
       };
     });
 
@@ -889,7 +865,7 @@ export default function AdminCalendar() {
         operating_hours: normalizedOperatingHours,
         days_off: ensureArray(schedule.days_off)
       },
-      title: 'Update studio schedule',
+      title: 'Update hours',
       description: 'Save these operating hours and days off?'
     });
   };
@@ -993,7 +969,7 @@ export default function AdminCalendar() {
         await updateSchedule(activeConfirmation.payload);
       }
     } catch (err) {
-      setFeedback({
+        setFeedback({
         tone: 'offline',
         message:
           activeConfirmation.type === 'create'
@@ -1004,7 +980,7 @@ export default function AdminCalendar() {
                 ? 'Unable to delete appointment.'
                 : activeConfirmation.type === 'closureDelete'
                   ? 'Unable to remove closure.'
-                  : 'Unable to update studio schedule.'
+                  : 'Unable to update hours.'
       });
       if (shouldCloseEditor && activeConfirmation.type === 'update') {
         const latestAppointment = appointments.find((entry) => entry.id === activeConfirmation.appointmentId);
@@ -2024,8 +2000,8 @@ export default function AdminCalendar() {
     <div className="space-y-8">
       <SectionTitle
         eyebrow="Admin"
-        title="Calendar & availability"
-        description="Keep the studio schedule organised with a single, focused control centre."
+        title="Calendar & hours"
+        description="Manage appointments, operating hours, and closures in one place."
       />
 
       <Card className="space-y-6">
@@ -2036,7 +2012,7 @@ export default function AdminCalendar() {
             </span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
-                Studio calendar
+                Calendar
               </p>
               <p className="text-sm text-gray-600">{appointmentCountLabel}</p>
             </div>
@@ -2121,14 +2097,14 @@ export default function AdminCalendar() {
             </span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
-                Studio availability
+                Operating hours
               </p>
               <p className="text-sm text-gray-600">Manage weekly hours and closures.</p>
             </div>
           </div>
           <Button type="button" onClick={requestScheduleUpdate}>
             <IconPencil className="h-4 w-4" />
-            Save availability
+            Save hours
           </Button>
         </div>
         <div className="grid gap-6">
@@ -2138,14 +2114,6 @@ export default function AdminCalendar() {
             </h3>
             <div className="space-y-3">
               {hoursDraft.map((entry) => {
-                const minimumHoursValue =
-                  typeof entry.minimum_duration_hours_input === 'string'
-                    ? entry.minimum_duration_hours_input
-                    : entry.minimum_duration_minutes
-                      ? String(
-                        Math.max(entry.minimum_duration_minutes ?? SLOT_INTERVAL_MINUTES, SLOT_INTERVAL_MINUTES) / 60
-                      )
-                      : '';
                 const statusStyles = entry.is_open
                   ? 'bg-emerald-100 text-emerald-700'
                   : 'bg-gray-200 text-gray-700';
@@ -2174,7 +2142,7 @@ export default function AdminCalendar() {
                         {entry.is_open ? 'Open' : 'Closed'}
                       </span>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))]">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
                         <label
                           htmlFor={`open-${entry.day}`}
@@ -2203,27 +2171,6 @@ export default function AdminCalendar() {
                           type="time"
                           value={entry.close_time}
                           onChange={(event) => handleHoursDraftChange(entry.day, 'close_time', event.target.value)}
-                          disabled={!entry.is_open}
-                          className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 disabled:opacity-50"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label
-                          htmlFor={`minimum-${entry.day}`}
-                          className="text-xs uppercase tracking-[0.3em] text-gray-500"
-                        >
-                          Min booking (hrs)
-                        </label>
-                        <input
-                          id={`minimum-${entry.day}`}
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={minimumHoursValue}
-                          onChange={(event) => {
-                            // Allow the user to freely type or clear the field; we normalize on save.
-                            handleHoursDraftChange(entry.day, 'minimum_duration_minutes', event.target.value);
-                          }}
                           disabled={!entry.is_open}
                           className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-0 disabled:opacity-50"
                         />

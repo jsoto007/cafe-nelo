@@ -41,7 +41,6 @@ function NavItem({ item, onNavigate, location }) {
 }
 
 const ADMIN_NAV_ITEMS = [
-  { label: 'Settings', to: '/dashboard/admin/settings' },
   { label: 'Calendar', to: '/dashboard/admin/calendar' },
   { label: 'Gallery', to: '/dashboard/admin/gallery' },
   { label: 'Menu', to: '/dashboard/admin/menu' },

@@ -36,12 +36,6 @@ export function getAdminResourcesForPath(path) {
     resources.add('gallery');
     resources.add('categories');
   }
-  if (path.includes('/dashboard/admin/settings')) {
-    resources.add('admins');
-    resources.add('categories');
-    resources.add('users');
-    resources.add('pricing');
-  }
   if (path.includes('/dashboard/admin/user/')) {
     resources.add('appointments');
     resources.add('users');

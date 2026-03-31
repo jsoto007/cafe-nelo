@@ -6,7 +6,6 @@ import SectionTitle from '../components/SectionTitle.jsx';
 import AdminCalendar from './admin/AdminCalendar.jsx';
 import AdminGallery from './admin/AdminGallery.jsx';
 import AdminMenu from './admin/AdminMenu.jsx';
-import AdminSettings from './admin/AdminSettings.jsx';
 import AdminSpecials from './admin/AdminSpecials.jsx';
 import AppointmentDetails from './admin/AppointmentDetails.jsx';
 import AdminUserDetails from './admin/AdminUserDetails.jsx';
@@ -74,15 +73,14 @@ function AdminDashboardContent() {
         ) : null}
 
         <Routes>
-          <Route index element={<Navigate to="settings" replace />} />
-          <Route path="settings" element={<AdminSettings />} />
+          <Route index element={<Navigate to="calendar" replace />} />
           <Route path="calendar" element={<AdminCalendar />} />
           <Route path="calendar/:appointmentId" element={<AppointmentDetails />} />
           <Route path="user/:userId" element={<AdminUserDetails />} />
           <Route path="gallery" element={<AdminGallery />} />
           <Route path="menu" element={<AdminMenu />} />
           <Route path="specials" element={<AdminSpecials />} />
-          <Route path="*" element={<Navigate to="settings" replace />} />
+          <Route path="*" element={<Navigate to="calendar" replace />} />
         </Routes>
       </FadeIn>
     </main>

@@ -172,7 +172,7 @@ export default function AdminUserDetails() {
   }).length;
 
   const handleBackToSettings = () => {
-    navigate('/dashboard/admin/settings');
+    navigate('/dashboard/admin/calendar');
   };
 
   const handleViewAppointment = (appointmentId) => {
@@ -202,10 +202,10 @@ export default function AdminUserDetails() {
       <Card className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">User not found</h2>
         <p className="text-sm text-gray-600">
-          The provided user identifier is invalid. Return to settings and select a user again.
+          The provided user identifier is invalid. Return to calendar and select a user again.
         </p>
         <Button type="button" variant="secondary" onClick={handleBackToSettings}>
-          Back to settings
+          Back to calendar
         </Button>
       </Card>
     );
@@ -226,7 +226,7 @@ export default function AdminUserDetails() {
         <h2 className="text-lg font-semibold text-gray-900">Unable to display user</h2>
         <p className="text-sm text-gray-600">{userError}</p>
         <Button type="button" variant="secondary" onClick={handleBackToSettings}>
-          Back to settings
+          Back to calendar
         </Button>
       </Card>
     );
@@ -245,7 +245,7 @@ export default function AdminUserDetails() {
           description="Review contact details, appointments, files, and notes for this client."
         />
         <Button type="button" variant="secondary" onClick={handleBackToSettings}>
-          Back to settings
+          Back to calendar
         </Button>
       </div>
 
