@@ -5355,6 +5355,89 @@ def serialize_special_item(item):
     }
 
 
+def _serialize_seed_menu_entries():
+    """Return the seeded public menu payload when the live DB cannot be read.
+
+    This keeps the public menu page available even if the production database
+    is temporarily unreachable or has not been migrated yet.
+    """
+    from seed_menu import MENU
+
+    result = []
+    for cat_index, cat_data in enumerate(MENU, start=1):
+        items = []
+        for item_index, item_data in enumerate(cat_data.get("items", []), start=1):
+            price_cents = item_data.get("price_cents")
+            items.append(
+                {
+                    "id": f"seed-menu-item-{cat_index}-{item_index}",
+                    "category_id": cat_index,
+                    "name": item_data.get("name"),
+                    "description": item_data.get("description"),
+                    "price": price_cents / 100 if price_cents is not None else None,
+                    "price_cents": price_cents,
+                    "tags": item_data.get("tags", []),
+                    "display_order": item_index - 1,
+                    "is_visible": True,
+                    "created_at": None,
+                    "updated_at": None,
+                }
+            )
+
+        result.append(
+            {
+                "id": f"seed-menu-category-{cat_index}",
+                "name": cat_data.get("category"),
+                "description": None,
+                "display_order": cat_data.get("display_order", cat_index - 1),
+                "is_visible": True,
+                "created_at": None,
+                "updated_at": None,
+                "items": items,
+            }
+        )
+
+    return result
+
+
+def _serialize_seed_special_entries():
+    """Return the seeded specials payload when the live DB cannot be read."""
+    from seed_menu import SPECIALS
+
+    result = []
+    for section_index, section_data in enumerate(SPECIALS, start=1):
+        items = []
+        for item_index, item_data in enumerate(section_data.get("items", []), start=1):
+            price_cents = item_data.get("price_cents")
+            items.append(
+                {
+                    "id": f"seed-special-item-{section_index}-{item_index}",
+                    "section_id": section_index,
+                    "name": item_data.get("name"),
+                    "description": item_data.get("description"),
+                    "price": price_cents / 100 if price_cents is not None else None,
+                    "price_cents": price_cents,
+                    "display_order": item_index - 1,
+                    "created_at": None,
+                    "updated_at": None,
+                }
+            )
+
+        result.append(
+            {
+                "id": f"seed-special-section-{section_index}",
+                "course": section_data.get("course"),
+                "display_order": section_data.get("display_order", section_index - 1),
+                "is_visible": True,
+                "created_at": None,
+                "updated_at": None,
+                "items": items,
+            }
+        )
+
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Menu — public endpoints
 # ---------------------------------------------------------------------------
@@ -5363,36 +5446,46 @@ def serialize_special_item(item):
 @api_bp.route("/api/menu", methods=["GET"])
 def public_get_menu():
     """Return all visible categories with their visible items, ordered."""
-    categories = (
-        MenuCategory.query
-        .filter_by(is_visible=True)
-        .order_by(MenuCategory.display_order.asc(), MenuCategory.id.asc())
-        .all()
-    )
-    result = []
-    for cat in categories:
-        visible_items = [i for i in cat.items if i.is_visible]
-        data = serialize_menu_category(cat, include_items=False)
-        data["items"] = [serialize_menu_item(i) for i in visible_items]
-        result.append(data)
-    return jsonify(result)
+    try:
+        categories = (
+            MenuCategory.query
+            .filter_by(is_visible=True)
+            .order_by(MenuCategory.display_order.asc(), MenuCategory.id.asc())
+            .all()
+        )
+        result = []
+        for cat in categories:
+            visible_items = [i for i in cat.items if i.is_visible]
+            data = serialize_menu_category(cat, include_items=False)
+            data["items"] = [serialize_menu_item(i) for i in visible_items]
+            result.append(data)
+        return jsonify(result)
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Menu query failed; serving seeded fallback data instead.")
+        return jsonify(_serialize_seed_menu_entries())
 
 
 @api_bp.route("/api/specials", methods=["GET"])
 def public_get_specials():
     """Return all visible special sections with their items, ordered."""
-    sections = (
-        DailySpecialSection.query
-        .filter_by(is_visible=True)
-        .order_by(DailySpecialSection.display_order.asc(), DailySpecialSection.id.asc())
-        .all()
-    )
-    result = []
-    for section in sections:
-        data = serialize_special_section(section, include_items=False)
-        data["items"] = [serialize_special_item(i) for i in section.items]
-        result.append(data)
-    return jsonify(result)
+    try:
+        sections = (
+            DailySpecialSection.query
+            .filter_by(is_visible=True)
+            .order_by(DailySpecialSection.display_order.asc(), DailySpecialSection.id.asc())
+            .all()
+        )
+        result = []
+        for section in sections:
+            data = serialize_special_section(section, include_items=False)
+            data["items"] = [serialize_special_item(i) for i in section.items]
+            result.append(data)
+        return jsonify(result)
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Specials query failed; serving seeded fallback data instead.")
+        return jsonify(_serialize_seed_special_entries())
 
 
 # ---------------------------------------------------------------------------
