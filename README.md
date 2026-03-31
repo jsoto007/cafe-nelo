@@ -95,7 +95,7 @@ The dev server proxies `/api/*` to `http://127.0.0.1:5000`, keeping credentialed
 ## Deployment notes
 
 - Frontend: deploy `client/` build output to Netlify or Vercel with `VITE_API_BASE_URL` pointing to the live API.
-- Backend: deploy `server/` to Render, Fly.io, or Heroku; provision a persistent database via `DATABASE_URI` that ends in `/tredicy_db` and ensure `npm run build --prefix client` runs before Gunicorn boots so the SPA bundle is available.
+- Backend: deploy `server/` to Render, Fly.io, or Heroku; provision a persistent database via `DATABASE_URI` that ends in `/tredicy_db` and ensure `npm ci --prefix client && npm run build --prefix client` runs before Gunicorn boots so the SPA bundle is available. The repo includes a `render.yaml` blueprint and a Procfile web command that both perform this step.
 - Automated tests force `DATABASE_URI` to an in-memory SQLite instance so test runs stay isolated from shared databases.
 - Update CORS origins in `app/__init__.py` if production hosts differ from local defaults.
 # black-work-tattoo
