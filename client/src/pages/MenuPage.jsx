@@ -5,7 +5,7 @@ import { apiGet } from '../lib/api.js';
 const TAG_LABELS = {
   v: { label: 'Vegetarian', short: 'V', bg: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   gf: { label: 'Gluten-Free', short: 'GF', bg: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  signature: { label: 'House Signature', short: '★', bg: 'bg-ts-crimson/10 text-ts-crimson ring-ts-crimson/20' },
+  signature: { label: 'House Signature', short: 'S', bg: 'bg-ts-crimson/10 text-ts-crimson ring-ts-crimson/20' },
 };
 
 function Tag({ tagKey }) {
@@ -139,7 +139,8 @@ export default function MenuPage() {
               <div className="flex flex-wrap gap-3">
                 {Object.entries(TAG_LABELS).map(([key, tag]) => (
                   <span key={key} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold ring-1 ${tag.bg}`}>
-                    {tag.short} {tag.label}
+                    <span className="min-w-5 text-center">{tag.short}</span>
+                    <span>{tag.label}</span>
                   </span>
                 ))}
               </div>
