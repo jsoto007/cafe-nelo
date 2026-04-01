@@ -13,7 +13,11 @@ from app.models import (
     ClientAccount,
     ClientDocument,
     Consultation,
+    DailySpecialItem,
+    DailySpecialSection,
     GalleryItem,
+    MenuCategory,
+    MenuItem,
     SessionOption,
     SystemSetting,
     StudioAvailabilityBlock,
@@ -24,10 +28,11 @@ from app.models import (
     Testimonial,
     UserNotification,
 )
+from seed_menu import MENU, SPECIALS
 
 PRIMARY_ADMIN = {
-    "name": "Melodi Nails Admin",
-    "email": "nailsmelodi@gmail.com",
+    "name": "Michael Colucci",
+    "email": "michael@tredicisocial.com",
     "password": "Aguacate@@1",
 }
 
@@ -67,6 +72,10 @@ def clear_existing_data():
         AdminAccount,
         StudioClosure,
         StudioWorkingHour,
+        DailySpecialItem,
+        DailySpecialSection,
+        MenuItem,
+        MenuCategory,
     ]
 
     for model in models_in_order:
@@ -427,6 +436,53 @@ def ensure_session_options():
     return True
 
 
+def ensure_menu():
+    import json as _json
+
+    if MenuCategory.query.count() > 0:
+        return False
+
+    for cat_data in MENU:
+        cat = MenuCategory(
+            name=cat_data["category"],
+            display_order=cat_data["display_order"],
+            is_visible=True,
+        )
+        db.session.add(cat)
+        db.session.flush()
+
+        for i, item_data in enumerate(cat_data["items"]):
+            db.session.add(MenuItem(
+                category_id=cat.id,
+                name=item_data["name"],
+                description=item_data.get("description"),
+                price_cents=item_data.get("price_cents"),
+                tags=_json.dumps(item_data.get("tags", [])),
+                display_order=i,
+                is_visible=True,
+            ))
+
+    for sec_data in SPECIALS:
+        section = DailySpecialSection(
+            course=sec_data["course"],
+            display_order=sec_data["display_order"],
+            is_visible=True,
+        )
+        db.session.add(section)
+        db.session.flush()
+
+        for i, item_data in enumerate(sec_data["items"]):
+            db.session.add(DailySpecialItem(
+                section_id=section.id,
+                name=item_data["name"],
+                description=item_data.get("description"),
+                price_cents=item_data.get("price_cents"),
+                display_order=i,
+            ))
+
+    return True
+
+
 def seed_demo_data():
     # Only wipe data if explicitly requested via environment variable.
     reset_requested = os.getenv("SEED_RESET", "").lower() == "true"
@@ -457,6 +513,7 @@ def seed_demo_data():
     ensure_admin_activity(owner_admin)
     ensure_settings()
     ensure_session_options()
+    ensure_menu()
     seed_real_appointments(owner_admin)
 
     db.session.commit()
