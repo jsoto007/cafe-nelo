@@ -1,4 +1,4 @@
-"""Seed the database with all Melodi Nails services.
+"""Seed the database with the restaurant's reservation options.
 
 Usage:
     python seed_services.py

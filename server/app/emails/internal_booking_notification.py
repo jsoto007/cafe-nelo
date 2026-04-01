@@ -65,7 +65,7 @@ def _build_calendar_attachment(
 ) -> str:
     lines = [
         "BEGIN:VCALENDAR",
-        "PRODID:-//Melodi Nails//Booking Notification//EN",
+        "PRODID:-//Tredici Social//Booking Notification//EN",
         "VERSION:2.0",
         "METHOD:REQUEST",
         "BEGIN:VEVENT",
@@ -112,7 +112,7 @@ def _detail_lines(
         f"Contact: {appointment.display_contact_email or 'n/a'}",
         f"Scheduled: {scheduled_label}",
         f"Duration: {duration_label}",
-        f"Service: {appointment.session_option.name if getattr(appointment, 'session_option', None) and appointment.session_option.name else 'Nail appointment'}",
+        f"Service: {appointment.session_option.name if getattr(appointment, 'session_option', None) and appointment.session_option.name else 'Restaurant reservation'}",
         f"Payment: {payment_label} ({_format_currency(charge_amount_cents, payment_currency)})",
     ]
     if session_price_cents:
@@ -157,9 +157,9 @@ def send_internal_booking_notification(
         manage_url,
     )
     appointment_location = current_app.config.get("BOOKING_LOCATION_NAME") or brand
-    organizer_email = current_app.config.get("MAILGUN_FROM") or f"no-reply@{current_app.config.get('MAILGUN_DOMAIN') or 'mail.melodinails.com'}"
+    organizer_email = current_app.config.get("MAILGUN_FROM") or f"no-reply@{current_app.config.get('MAILGUN_DOMAIN') or 'mail.tredicisocial.com'}"
     internal_email = (
-        current_app.config.get("INTERNAL_BOOKING_NOTIFICATION_EMAIL") or "nailsmelodi@gmail.com"
+        current_app.config.get("INTERNAL_BOOKING_NOTIFICATION_EMAIL") or "reservations@tredicisocial.com"
     )
 
     calendar_invite_text: str | None = None
@@ -184,7 +184,7 @@ def send_internal_booking_notification(
         attachments.append((calendar_invite_filename, calendar_invite_text, "text/calendar; method=REQUEST; charset=UTF-8"))
         calendar_invite_data_uri = f"data:text/calendar;charset=utf-8,{quote(calendar_invite_text)}"
 
-    header_text = "🔔 NEW APPOINTMENT BOOKED — this email shares the full details and includes a calendar invite for your records."
+    header_text = "NEW RESERVATION BOOKED - this email shares the full details and includes a calendar invite for your records."
     text_lines = [header_text, "", *detail_lines]
     if attachments:
         text_lines.append("")

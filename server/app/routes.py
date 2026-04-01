@@ -3957,7 +3957,7 @@ def create_appointment():
                 session_option = option
 
     if not session_option:
-        errors.append({"field": "session_option_id", "message": "Please choose a nail service."})
+        errors.append({"field": "session_option_id", "message": "Please choose a reservation option."})
 
     if not client_account:
         if not first_name:
@@ -4067,9 +4067,9 @@ def create_appointment():
         return jsonify({"errors": errors}), 400
 
     payment_note = (
-        f"{session_option.name or 'Nail appointment'} - full payment"
+        f"{session_option.name or 'Restaurant reservation'} - full payment"
         if pay_full_amount
-        else f"{session_option.name or 'Nail appointment'} - {booking_fee_percent}% deposit"
+        else f"{session_option.name or 'Restaurant reservation'} - {booking_fee_percent}% deposit"
     )
 
     appointment = TattooAppointment(
@@ -4126,7 +4126,7 @@ def create_appointment():
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({"error": "Unable to create appointment."}), 500
+        return jsonify({"error": "Unable to create reservation."}), 500
 
     appointment = TattooAppointment.query.options(
         joinedload(TattooAppointment.client),

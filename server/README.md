@@ -1,6 +1,6 @@
-# Black Ink Tattoo API
+# Tredici Social API
 
-Flask application factory that powers the BLACK INK TATTOO client with JSON endpoints, seeded demo data, and secure defaults.
+Flask application factory that powers the restaurant client with JSON endpoints, seeded demo data, and secure defaults.
 
 ## Quickstart
 
@@ -15,7 +15,7 @@ Build the React client (`npm run build --prefix client`) so Flask can serve the 
 
 ## Available routes
 
-- `GET /api/gallery?category=blackwork|fine-line|color` - filtered gallery items
+- `GET /api/gallery?category=dining-room|bar-cocktails|private-events` - filtered gallery items
 - `GET /api/testimonials` - testimonial collection
 - `POST /api/consultations` - create a consultation request with minimal validation
 
@@ -36,7 +36,7 @@ Build the React client (`npm run build --prefix client`) so Flask can serve the 
 
 - CORS is limited to `http://127.0.0.1:5173` by default; adjust for production hosts.
 - When the React dev server runs on a different host/port (e.g., Vite on `127.0.0.1:5173`), you may need to build the client or proxy requests so the browser sees the API as same-site. Setting `SESSION_COOKIE_SAMESITE=None` also requires `SESSION_COOKIE_SECURE=true` and HTTPS, otherwise browsers will reject the cookie.
-- SQLAlchemy seeds demo gallery and testimonial data on first boot so the client can render immediately.
+- SQLAlchemy seeds demo gallery, testimonials, menu, and restaurant reservation data on first boot so the client can render immediately.
 - Consider integrating Flask-Migrate for schema changes (left as a TODO).
 
 ### PostgreSQL 17
@@ -44,5 +44,5 @@ Build the React client (`npm run build --prefix client`) so Flask can serve the 
 - Install PostgreSQL 17 (for example, `brew install postgresql@17`) and start the service.
 - Create a development database named `tredicy_db` and point `DATABASE_URL` or `DATABASE_URI` in `.env` to `postgresql+psycopg2://<user>:<password>@127.0.0.1:5432/tredicy_db`.
 - Pytest automatically rewires the database URI to an in-memory SQLite database to avoid touching shared data.
-- Run `pipenv run flask db upgrade` (or rely on `db.create_all()`), then execute `pipenv run python seed.py` to populate demo data.
+- Run `pipenv run flask db upgrade` (or rely on `db.create_all()`), then execute `pipenv run python seed.py` to populate demo data. Use `SEED_REBUILD=true` to drop and recreate the schema before seeding when you need a clean rebuild in non-production environments.
 - To bootstrap a production admin account during deploy, set `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD`, and optionally `ADMIN_BOOTSTRAP_NAME`. The `ensure-bootstrap-admin` command is idempotent and updates the password if the email already exists.

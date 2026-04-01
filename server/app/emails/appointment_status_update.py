@@ -57,7 +57,7 @@ def send_appointment_status_update_email(
     service_name = (
         appointment.session_option.name
         if getattr(appointment, "session_option", None) and appointment.session_option.name
-        else "Nail appointment"
+        else "Restaurant reservation"
     )
     manage_url = f"{client_base_url()}/portal/appointments"
 
@@ -131,7 +131,7 @@ def send_appointment_status_update_email(
         + escape(manage_url)
         + '" style="display:inline-block;padding:12px 20px;background-color:#0b0b0b;'
         'color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">'
-        "Manage appointment</a>"
+        "Manage reservation</a>"
     )
 
     html = (

@@ -11,7 +11,7 @@ from flask import current_app
 from .base import brand_name, client_base_url, email_logo_url, mailgun_send
 
 DEFAULT_STUDIO_LOCATION = ""
-BOOKING_SUPPORT_EMAIL = "nailsmelodi@gmail.com"
+BOOKING_SUPPORT_EMAIL = "reservations@tredicisocial.com"
 NYC_TZ = ZoneInfo("America/New_York")
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -86,7 +86,7 @@ def send_booking_confirmation_email(
     service_name = (
         appointment.session_option.name
         if getattr(appointment, "session_option", None) and appointment.session_option.name
-        else "Nail appointment"
+        else "Restaurant reservation"
     )
     if appointment.duration_minutes:
         hours = appointment.duration_minutes / 60.0
@@ -131,14 +131,14 @@ def send_booking_confirmation_email(
             f"&details={quote_plus(description)}"
             f"&location={quote_plus(studio_location)}"
         )
-        event_uid = f"{reference}-{appointment.id}@mail.melodinails.com"
+        event_uid = f"{reference}-{appointment.id}@mail.tredicisocial.com"
         dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         ics_lines = [
             "BEGIN:VCALENDAR",
             "VERSION:2.0",
             "CALSCALE:GREGORIAN",
             "METHOD:PUBLISH",
-            "PRODID:-//Melodi Nails//Booking Confirmation//EN",
+            "PRODID:-//Tredici Social//Booking Confirmation//EN",
             "BEGIN:VEVENT",
             f"UID:{event_uid}",
             f"DTSTAMP:{dtstamp}",
@@ -159,9 +159,9 @@ def send_booking_confirmation_email(
 
     lines = [
         f"Hi {appointment.contact_name or 'there'},",
-        f"Thank you for booking with {brand}. Your appointment is confirmed. Here are the details:",
+        f"Thank you for booking with {brand}. Your reservation is confirmed. Here are the details:",
         f"- Reference: {reference}",
-        f"- Appointment: {scheduled_label} ({duration_label})",
+        f"- Reservation: {scheduled_label} ({duration_label})",
         f"- Studio address: {studio_location}",
         f"- Service: {service_name}",
         f"- Payment: {payment_label} ({_format_currency(charge_amount_cents, payment_currency)})",
@@ -200,7 +200,7 @@ def send_booking_confirmation_email(
         )
 
     _detail_row("Reference", reference)
-    _detail_row("Appointment", f"{scheduled_label} ({duration_label})")
+    _detail_row("Reservation", f"{scheduled_label} ({duration_label})")
     _detail_row("Studio address", studio_location)
     _detail_row("Service", service_name)
     _detail_row("Payment", f"{payment_label} ({_format_currency(charge_amount_cents, payment_currency)})")

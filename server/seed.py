@@ -1,7 +1,9 @@
-"""Standalone script for populating demo data."""
+"""Standalone script for rebuilding and populating restaurant demo data."""
 
 import os
 from datetime import datetime, timedelta
+
+from sqlalchemy.exc import OperationalError
 
 from app import create_app, db
 from app.models import (
@@ -31,15 +33,15 @@ from app.models import (
 from seed_menu import MENU, SPECIALS
 
 PRIMARY_ADMIN = {
-    "name": "Michael Colucci",
-    "email": "michael@tredicisocial.com",
+    "name": "Giovanni Rossi",
+    "email": "giovanni@tredicisocial.com",
     "password": "Aguacate@@1",
 }
 
 DEMO_USER = {
     "first_name": "Demo",
-    "last_name": "User",
-    "email": "demo@melodinails.local",
+    "last_name": "Diner",
+    "email": "demo@tredicisocial.local",
     "phone": "+1-555-555-0147",
     "password": "DemoPassword2024!",
 }
@@ -50,6 +52,27 @@ REAL_APPOINTMENTS = [
 
 BOOKING_FEE_SETTING_KEY = "booking_fee_percent"
 DEFAULT_BOOKING_FEE_PERCENT = 20
+
+
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_production_like() -> bool:
+    env_value = (
+        os.getenv("APP_ENV", "")
+        or os.getenv("FLASK_ENV", "")
+        or os.getenv("ENV", "")
+    ).strip().lower()
+    return env_value == "production"
+
+
+def _destructive_reset_allowed() -> bool:
+    return _env_flag("ALLOW_DESTRUCTIVE_RESET")
+
+
+def _schema_rebuild_requested() -> bool:
+    return _env_flag("SEED_REBUILD") or _env_flag("SEED_RECREATE_SCHEMA")
 
 
 def clear_existing_data():
@@ -127,16 +150,16 @@ def ensure_categories():
     db.session.add_all(
         [
             TattooCategory(
-                name="Manicura",
-                description="Servicios completos de manicura y esmaltado.",
+                name="Dining Room",
+                description="Main dining room photography and guest table styling.",
             ),
             TattooCategory(
-                name="Pedicura",
-                description="Servicios completos de pedicura y cuidado de pies.",
+                name="Bar & Cocktails",
+                description="Signature drinks, bar detail shots, and evening ambiance.",
             ),
             TattooCategory(
-                name="Diseños Premium",
-                description="Diseños especiales, acrílicos y arte para uñas.",
+                name="Private Events",
+                description="Private dining, chef's table, and special occasion imagery.",
             ),
         ]
     )
@@ -152,12 +175,12 @@ def ensure_testimonials():
         [
             Testimonial(
                 name="Maria G.",
-                quote="Excelente servicio y atención. Las uñas me quedaron hermosas y el trato fue de primera. ¡Muy recomendada!",
+                quote="The dinner service was polished, the pacing was perfect, and every plate arrived exactly as described.",
                 rating=5,
             ),
             Testimonial(
                 name="Ana L.",
-                quote="Me encantó el detalle y cuidado que pusieron en mi diseño. Sin duda volveré.",
+                quote="The menu felt thoughtful and seasonal, and the staff made the whole evening feel effortless.",
                 rating=5,
             ),
         ]
@@ -169,16 +192,16 @@ def ensure_appointment(admin, user):
     if not admin or not user:
         return False
 
-    existing = TattooAppointment.query.filter_by(reference_code="ARTEM-SEED-01").first()
+    existing = TattooAppointment.query.filter_by(reference_code="TREDICI-SEED-01").first()
     if existing:
         return False
 
     appointment = TattooAppointment(
-        reference_code="MELODI-SEED-01",
+        reference_code="TREDICI-SEED-01",
         client=user,
         assigned_admin=admin,
         status="confirmed",
-        client_description="Manicura acrílica con diseño premium",
+        client_description="Dinner reservation for two with patio seating request",
         scheduled_start=datetime.utcnow() + timedelta(days=18),
         duration_minutes=90,
     )
@@ -190,7 +213,7 @@ def ensure_appointment(admin, user):
             appointment=appointment,
             admin_uploader=admin,
             kind="note",
-            note_text="Confirmar los colores con la clienta antes de empezar.",
+            note_text="Confirm patio seating and note any dietary preferences before service.",
             is_visible_to_client=False,
         )
     )
@@ -199,12 +222,12 @@ def ensure_appointment(admin, user):
 
 
 
-# Seed real appointments from the embedded schedule data.
+# Seed real reservations from the embedded schedule data.
 def seed_real_appointments(admin):
-    """Seed real appointments from the embedded schedule data.
+    """Seed real reservations from the embedded schedule data.
 
     This does NOT wipe existing data and is safe to run multiple times. It
-    uses reference codes of the form REAL-<Appointment ID> to stay idempotent.
+    uses reference codes of the form REAL-<Reservation ID> to stay idempotent.
     """
     if not admin:
         return False
@@ -247,10 +270,10 @@ def seed_real_appointments(admin):
             created_any = True
 
         reference_code = f"REAL-{data['appointment_id']}"
-        existing_appointment = TattooAppointment.query.filter_by(
+        existing_reservation = TattooAppointment.query.filter_by(
             reference_code=reference_code
         ).first()
-        if existing_appointment:
+        if existing_reservation:
             # Already imported
             continue
 
@@ -278,13 +301,13 @@ def seed_real_appointments(admin):
 
         if data.get("appointment_price") is not None:
             note_lines.append(
-                f"Appointment price: ${data['appointment_price']:,.2f}"
+                f"Reservation total: ${data['appointment_price']:,.2f}"
             )
         if data.get("amount_paid_online") is not None:
             note_lines.append(
-                f"Amount paid online: ${data['amount_paid_online']:,.2f}"
+                f"Deposit paid online: ${data['amount_paid_online']:,.2f}"
             )
-        note_lines.append(f"Paid (source): {'yes' if data.get('paid') else 'no'}")
+        note_lines.append(f"Paid online: {'yes' if data.get('paid') else 'no'}")
 
         extra_fields = [
             ("Timezone", data.get("timezone")),
@@ -325,13 +348,13 @@ def seed_real_appointments(admin):
         created_any = True
 
     if created_any:
-        print("Seeded real appointments from embedded schedule.")
+        print("Seeded real reservations from embedded schedule.")
     else:
-        print("No new real appointments were added from embedded schedule.")
+        print("No new real reservations were added from embedded schedule.")
     if skipped_incomplete or skipped_invalid:
         print(
             f"Skipped {skipped_incomplete} incomplete and "
-            f"{skipped_invalid} malformed appointments without start/end times."
+            f"{skipped_invalid} malformed reservations without start/end times."
         )
     return created_any
 
@@ -347,14 +370,14 @@ def ensure_notifications(user):
         [
             UserNotification(
                 user=user,
-                title="Consultation scheduled",
-                body="Your consultation is locked in. Review the prep guide ahead of time.",
+                title="Reservation confirmed",
+                body="Your dinner reservation is locked in. Review the menu and arrival details ahead of time.",
                 category="booking",
             ),
             UserNotification(
                 user=user,
-                title="Documents reviewed",
-                body="ID verification is complete. We are ready for the session.",
+                title="Table details reviewed",
+                body="Guest preferences and notes are ready for service.",
                 category="documents",
             ),
         ]
@@ -371,13 +394,13 @@ def ensure_admin_activity(admin):
             AdminActivityLog(
                 admin=admin,
                 action="login",
-                details="Admin signed in to confirm today's schedule.",
+                details="Host signed in to confirm tonight's reservations.",
                 ip_address="127.0.0.1",
             ),
             AdminActivityLog(
                 admin=admin,
                 action="appointment_update",
-                details="Double-checked the pending appointment references.",
+                details="Double-checked the pending reservation references.",
                 ip_address="127.0.0.1",
             ),
         ]
@@ -394,12 +417,12 @@ def ensure_settings():
             SystemSetting(
                 key="booking_window_days",
                 value="60",
-                description="Number of days in advance clients can book appointments.",
+                description="Number of days in advance guests can book reservations.",
             ),
             SystemSetting(
                 key="notification_email",
                 value=PRIMARY_ADMIN["email"],
-                description="Address used for outgoing notifications.",
+                description="Address used for outgoing reservation notifications.",
             ),
             SystemSetting(
                 key="maintenance_mode",
@@ -410,12 +433,12 @@ def ensure_settings():
             SystemSetting(
                 key="studio_hourly_rate_cents",
                 value="22000",
-                description="Hourly rate charged for tattoo sessions (in cents).",
+                description="Legacy pricing control used by the reservation flow (in cents).",
             ),
             SystemSetting(
                 key=BOOKING_FEE_SETTING_KEY,
                 value=str(DEFAULT_BOOKING_FEE_PERCENT),
-                description="Default booking fee percentage collected during reservations.",
+                description="Default deposit percentage collected during reservations.",
             ),
         ]
     )
@@ -427,9 +450,9 @@ def ensure_session_options():
         return False
 
     options = [
-        {"name": "One-hour intro", "duration_minutes": 60, "price_cents": 11000},
-        {"name": "Two-hour focus", "duration_minutes": 120, "price_cents": 19000},
-        {"name": "Three-hour deep", "duration_minutes": 180, "price_cents": 26000},
+        {"name": "Early Seating", "duration_minutes": 60, "price_cents": 11000},
+        {"name": "Chef's Counter", "duration_minutes": 120, "price_cents": 19000},
+        {"name": "Private Dining", "duration_minutes": 180, "price_cents": 26000},
     ]
     for entry in options:
         db.session.add(SessionOption(**entry))
@@ -485,22 +508,17 @@ def ensure_menu():
 
 def seed_demo_data():
     # Only wipe data if explicitly requested via environment variable.
-    reset_requested = os.getenv("SEED_RESET", "").lower() == "true"
-    # Never allow destructive reset in production-like environments.
-    env_value = (
-        os.getenv("APP_ENV", "")
-        or os.getenv("FLASK_ENV", "")
-        or os.getenv("ENV", "")
-    ).lower()
-    is_prod = env_value == "production"
-    if reset_requested and is_prod:
+    reset_requested = _env_flag("SEED_RESET")
+    rebuild_schema = _schema_rebuild_requested()
+    if (reset_requested or rebuild_schema) and _is_production_like() and not _destructive_reset_allowed():
         print(
-            "Refusing to reset data because environment looks like production "
-            f"(ENV={env_value or 'unset'})."
+            "Refusing to reset or rebuild data because the environment looks like production. "
+            "Set ALLOW_DESTRUCTIVE_RESET=true only if you intentionally want to wipe the database."
         )
         reset_requested = False
+        rebuild_schema = False
 
-    if reset_requested:
+    if reset_requested and not rebuild_schema:
         clear_existing_data()
 
     owner_admin, _ = ensure_admin_account(PRIMARY_ADMIN)
@@ -523,11 +541,29 @@ def seed_demo_data():
 def main():
     app = create_app()
     with app.app_context():
-        db.create_all()
-        if seed_demo_data():
-            print("Seed data reset and populated successfully.")
-        else:
-            print("No changes were necessary while seeding data.")
+        rebuild_schema = _schema_rebuild_requested()
+        reset_requested = _env_flag("SEED_RESET")
+        destructive_requested = reset_requested or rebuild_schema
+        if destructive_requested and _is_production_like() and not _destructive_reset_allowed():
+            print(
+                "Refusing to reset or rebuild data because the environment looks like production. "
+                "Set ALLOW_DESTRUCTIVE_RESET=true only if you intentionally want to wipe the database."
+            )
+            rebuild_schema = False
+        try:
+            if rebuild_schema:
+                db.drop_all()
+            db.create_all()
+            if seed_demo_data():
+                print("Database rebuilt and restaurant seed data populated successfully.")
+            else:
+                print("No changes were necessary while seeding data.")
+        except OperationalError as exc:
+            raise RuntimeError(
+                "Database connection failed while rebuilding/seeding. "
+                "Check DATABASE_URL/DATABASE_URI, confirm it ends in /tredicy_db, "
+                "and verify the Render Postgres host is the correct internal or external URL."
+            ) from exc
 
 
 if __name__ == "__main__":

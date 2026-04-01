@@ -1,6 +1,6 @@
-# Black Ink Tattoo
+# Tredici Social
 
-A minimal, monochrome full-stack experience for the BLACK INK TATTOO studio. The React + Tailwind client pairs with a Flask + SQLAlchemy API to showcase work, capture consultations, and stay accessible across light and dark themes.
+A minimal, monochrome full-stack experience for the restaurant. The React + Tailwind client pairs with a Flask + SQLAlchemy API to showcase the menu, capture reservations, and stay accessible across light and dark themes.
 
 ## Getting Started
 
@@ -32,7 +32,7 @@ The Flask server now serves the built Vite bundle from `client/dist`. Run `npm r
 2. Create the development database: `createdb tredicy_db`.
 3. Copy `.env.example` to `.env` inside `server/` and adjust `DATABASE_URI` if your credentials differ. The example points to `postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/tredicy_db`.
 4. Apply migrations (or allow `db.create_all()` on first boot): `pipenv run flask db upgrade`.
-5. Seed demo data: `pipenv run python seed.py`.
+5. Seed demo data: `pipenv run python seed.py`. Set `SEED_REBUILD=true` if you need to drop and recreate the schema before seeding in a non-production environment.
 
 ### Client
 
@@ -72,13 +72,13 @@ The dev server proxies `/api/*` to `http://127.0.0.1:5000`, keeping credentialed
 | `STRIPE_FAKE_PAYMENTS` | `server/.env` | Set to `true` to bypass live Stripe checkout during development. |
 | `MAILGUN_DOMAIN` | `server/.env` | Mailgun domain used for outgoing confirmation & activation emails. |
 | `MAILGUN_API_KEY` | `server/.env` | Private Mailgun API key for delivering messages. |
-| `MAILGUN_FROM` / `MAILGUN_FROM_EMAIL` | `server/.env` | Sender address for automated emails (e.g. `Melodi Nails <melodinails@mail.sotodev.com>`). `MAILGUN_FROM` takes priority; `MAILGUN_FROM_EMAIL` is accepted as a fallback. |
+| `MAILGUN_FROM` / `MAILGUN_FROM_EMAIL` | `server/.env` | Sender address for automated emails (for example, `Tredici Social <noreply@tredicisocial.com>`). `MAILGUN_FROM` takes priority; `MAILGUN_FROM_EMAIL` is accepted as a fallback. |
 | `CLIENT_BASE_URL` | `server/.env` | Frontend root URL used when generating activation links (default `http://localhost:5173`). |
 
 ### Payments & uploads
 
 - **Uploads** – When the optional `UPLOADS_S3_*` variables are populated, media uploaded from the admin dashboard is streamed directly to S3 and served from the bucket (or a CDN you configure with `UPLOADS_PUBLIC_BASE_URL`). Without these values, uploads are stored in the database (and mirrored to disk) so they survive deployments; S3/CDN storage is still recommended for large files.
-- **Stripe checkout** – Booking submissions now create an appointment draft and redirect the client into Stripe Checkout. After payment succeeds, the confirmation page verifies the Stripe session and records the payment against the appointment. Use `STRIPE_FAKE_PAYMENTS=true` locally if you want to bypass live checkout during development.
+- **Stripe checkout** – Reservation submissions now create a draft reservation and redirect the guest into Stripe Checkout. After payment succeeds, the confirmation page verifies the Stripe session and records the payment against the reservation. Use `STRIPE_FAKE_PAYMENTS=true` locally if you want to bypass live checkout during development.
 
 ## Architecture
 
