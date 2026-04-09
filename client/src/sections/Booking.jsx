@@ -1,7 +1,140 @@
 // ReservationsBand — dark CTA band encouraging table reservations via OpenTable
+import { useEffect, useMemo, useState } from 'react';
 import FadeIn from '../components/FadeIn.jsx';
+import { apiGet } from '../lib/api.js';
+
+const WEEKDAY_ORDER = [
+  { key: 'monday', label: 'Monday' },
+  { key: 'tuesday', label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday', label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
+  { key: 'sunday', label: 'Sunday' }
+];
+
+const WEEKDAY_INDEX = WEEKDAY_ORDER.reduce((acc, entry, index) => {
+  acc[entry.key] = index;
+  return acc;
+}, {});
+
+const TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit'
+});
+
+function formatTimeValue(value) {
+  if (!value) return null;
+  const [hours, minutes] = value.split(':').map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  const dateValue = new Date();
+  dateValue.setHours(hours, minutes, 0, 0);
+  return TIME_FORMATTER.format(dateValue).replace(' AM', 'am').replace(' PM', 'pm');
+}
+
+function formatTimeRange(openTime, closeTime) {
+  const start = formatTimeValue(openTime);
+  const end = formatTimeValue(closeTime);
+  if (start && end) return `${start}–${end}`;
+  if (start) return start;
+  if (end) return end;
+  return 'Closed';
+}
+
+function splitIntoRanges(indexes) {
+  const ranges = [];
+  if (!indexes.length) return ranges;
+  let rangeStart = indexes[0];
+  let prev = indexes[0];
+  for (let i = 1; i < indexes.length; i += 1) {
+    const current = indexes[i];
+    if (current === prev + 1) {
+      prev = current;
+      continue;
+    }
+    ranges.push({ start: rangeStart, end: prev });
+    rangeStart = current;
+    prev = current;
+  }
+  ranges.push({ start: rangeStart, end: prev });
+  return ranges;
+}
+
+function buildSummary(hours) {
+  const entries = (hours || [])
+    .map((entry) => ({
+      originalDay: entry.day,
+      is_open: entry.is_open,
+      open_time: entry.is_open ? entry.open_time : null,
+      close_time: entry.is_open ? entry.close_time : null,
+      index: WEEKDAY_INDEX[String(entry.day || '').toLowerCase()]
+    }))
+    .filter((entry) => Number.isFinite(entry.index));
+
+  if (!entries.length) return [];
+
+  const byTime = new Map();
+  entries.forEach((entry) => {
+    const key = entry.is_open ? `${entry.open_time || ''}|${entry.close_time || ''}` : 'closed';
+    const bucket = byTime.get(key) || {
+      is_open: entry.is_open,
+      open_time: entry.open_time,
+      close_time: entry.close_time,
+      indexes: []
+    };
+    bucket.indexes.push(entry.index);
+    byTime.set(key, bucket);
+  });
+
+  const summary = [];
+  byTime.forEach(({ is_open, open_time, close_time, indexes }) => {
+    const uniqueIndexes = Array.from(new Set(indexes)).sort((a, b) => a - b);
+    const ranges = splitIntoRanges(uniqueIndexes);
+    ranges.forEach((range) => {
+      const startLabel = WEEKDAY_ORDER[range.start]?.label?.substring(0, 3) ?? '';
+      const endLabel = WEEKDAY_ORDER[range.end]?.label?.substring(0, 3) ?? '';
+      const dayLabel = range.start === range.end ? startLabel : `${startLabel} – ${endLabel}`;
+      summary.push({
+        dayLabel,
+        timeLabel: is_open ? formatTimeRange(open_time, close_time) : 'Closed',
+        startIndex: range.start
+      });
+    });
+  });
+  return summary.sort((a, b) => a.startIndex - b.startIndex);
+}
 
 export default function ReservationsBand() {
+  const [hours, setHours] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    async function loadHours() {
+      try {
+        const data = await apiGet('/api/availability/config', { signal: controller.signal });
+        if (isMounted && Array.isArray(data?.operating_hours)) {
+          setHours(data.operating_hours);
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
+
+    loadHours();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
+
+  const summaryRows = useMemo(() => buildSummary(hours), [hours]);
+  const hoursText = summaryRows.length > 0 
+    ? summaryRows.filter(r => r.timeLabel !== 'Closed').map(r => `${r.dayLabel} ${r.timeLabel}`).join('  ·  ')
+    : 'LOADING HOURS...';
+
   return (
     <section
       id="reservations"
@@ -48,7 +181,7 @@ export default function ReservationsBand() {
         </div>
 
         <p className="text-[11px] uppercase tracking-[0.35em] text-ts-muted">
-          Tue – Thu 5–10pm &nbsp;·&nbsp; Fri – Sat 5–11pm &nbsp;·&nbsp; Sun 4–9pm
+          {hoursText}
         </p>
       </FadeIn>
     </section>
