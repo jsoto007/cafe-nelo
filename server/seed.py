@@ -32,6 +32,8 @@ from app.models import (
 )
 from seed_menu import MENU, SPECIALS
 
+
+
 PRIMARY_ADMIN = {
     "name": "Giovanni Rossi",
     "email": "admin@cafenelo.com",
