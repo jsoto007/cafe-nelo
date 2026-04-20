@@ -12,15 +12,15 @@ export default function Testimonials() {
   const copy = isSpanish
     ? {
         eyebrow: 'Testimonios',
-        title: 'Clientas felices',
+        title: 'Lo que dicen nuestros huéspedes',
         description:
-          'Algunas notas breves de clientas que visitan Tredici Social por sus acabados hermosos, reservas organizadas y una experiencia tranquila de principio a fin.',
+          'Algunas notas breves de quienes visitan Café Nelo — una experiencia de principio a fin que merece recordarse.',
       }
     : {
         eyebrow: 'Testimonials',
-        title: 'Clients leave glowing',
+        title: 'What our guests are saying',
         description:
-          'A few quick notes from clients who come to Tredici Social for beautiful finishes, organized booking, and an experience that feels calm from start to finish.',
+          'A few notes from guests who dine at Café Nelo — an experience worth remembering from start to finish.',
       };
 
   const filteredEntries = useMemo(
@@ -49,7 +49,7 @@ export default function Testimonials() {
   );
 
   return (
-    <section id="testimonials" className="bg-[#fffaf5] py-16 text-[#23301d]">
+    <section id="testimonials" className="bg-ts-cream py-16 text-ts-dark-text">
       <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6">
         <SectionTitle
           eyebrow={copy.eyebrow}
@@ -58,7 +58,7 @@ export default function Testimonials() {
         />
         <FadeIn key={entriesKey} className="grid gap-8 md:grid-cols-3" childClassName="h-full" delayStep={0.12}>
           {displayedEntries.map((entry) => (
-            <Card key={entry.id} className="h-full space-y-6 bg-[#fffdf9]">
+            <Card key={entry.id} className="h-full space-y-6 bg-white">
               <div className="space-y-4">
                 <Stars rating={entry.rating} />
                 <p className="text-sm text-slate-900">&ldquo;{entry.quote}&rdquo;</p>

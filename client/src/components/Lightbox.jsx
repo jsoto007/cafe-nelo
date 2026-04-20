@@ -17,7 +17,7 @@ function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
-const INSTAGRAM_URL = 'https://www.instagram.com/tredici.social/';
+const INSTAGRAM_URL = 'https://www.instagram.com/cafenelo/';
 
 export default function Lightbox({ open, image, images = [], startIndex = 0, onClose, instagramUrl = INSTAGRAM_URL }) {
   const overlayRef = useRef(null);

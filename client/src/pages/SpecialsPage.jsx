@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import FadeIn from '../components/FadeIn.jsx';
 import { apiGet } from '../lib/api.js';
-import Accolades from '../sections/Accolades.jsx';
 
 export default function SpecialsPage() {
   const [specials, setSpecials] = useState([]);
@@ -21,7 +20,7 @@ export default function SpecialsPage() {
       <div className="bg-ts-charcoal py-20 text-center">
         <FadeIn immediate className="mx-auto max-w-2xl space-y-4 px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.5em] text-ts-gold">
-            Tredici Social · Bronxville, NY
+            Café Nelo · Bronxville, NY
           </p>
           <h1 className="font-heading text-5xl font-medium text-white sm:text-6xl">
             Specials of the Day
@@ -89,7 +88,6 @@ export default function SpecialsPage() {
         </div>
       </main>
 
-      <Accolades />
     </>
   );
 }

@@ -83,11 +83,11 @@ export default function MenuPage() {
       <div className="bg-ts-charcoal py-16 text-center">
         <FadeIn immediate className="mx-auto max-w-2xl space-y-3 px-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-ts-gold">
-            Tredici Social
+            Café Nelo
           </p>
           <h1 className="font-heading text-5xl font-medium text-white">Our Menu</h1>
           <p className="text-sm text-ts-light-text/70">
-            Seasonal ingredients, Italian craft. Menu changes periodically — ask your server about today&apos;s specials.
+            Global flavors, seasonal ingredients. Menu changes periodically — ask your server about today&apos;s specials.
           </p>
         </FadeIn>
       </div>
@@ -148,15 +148,15 @@ export default function MenuPage() {
         <div className="mt-12 rounded-2xl bg-ts-charcoal p-8 text-center">
           <p className="font-heading text-2xl font-medium text-white">Ready to dine?</p>
           <p className="mt-2 text-sm text-ts-light-text/70">
-            Reserve your table on OpenTable — we recommend booking ahead for weekends.
+            Reserve your table on Resy — we recommend booking ahead for weekends.
           </p>
           <a
-            href="https://www.opentable.com/r/tredici-social-bronxville"
+            href="https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo"
             target="_blank"
             rel="noopener noreferrer"
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-ts-scarlet px-8 py-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-white shadow-crimson transition hover:bg-ts-crimson"
           >
-            Reserve on OpenTable
+            Reserve on Resy
           </a>
         </div>
       </main>

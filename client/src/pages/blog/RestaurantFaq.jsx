@@ -6,7 +6,7 @@ export default function RestaurantFaq() {
     ? {
         title: 'Preguntas Frecuentes del Restaurant',
         intro:
-          'Estas son algunas de las preguntas que recibimos con mas frecuencia antes de reservar en Tredici Social. Cubren tiempos, preparacion, mantenimiento y lo que puedes esperar al visitar el estudio.',
+          'Estas son algunas de las preguntas que recibimos con mas frecuencia antes de reservar en Café Nelo. Cubren tiempos, preparacion, mantenimiento y lo que puedes esperar al visitar el estudio.',
         questions: [
           {
             question: 'Cuanto dura mi servicio de unas?',
@@ -44,7 +44,7 @@ export default function RestaurantFaq() {
     : {
         title: 'Table Restaurant Frequently Asked Questions',
         intro:
-          'These are some of the questions clients ask most often before booking with Tredici Social. They cover timing, prep, maintenance, and what to expect when visiting the studio.',
+          'These are some of the questions guests ask most often before booking at Café Nelo. They cover timing, prep, reservations, and what to expect when dining with us.',
         questions: [
           {
             question: 'How long will my dining service last?',
@@ -100,8 +100,8 @@ export default function RestaurantFaq() {
       <footer>
         <p>
           {copy.footer}{' '}
-          <a className="font-medium text-black underline" href="mailto:info@tredicisocial.com">
-            info@tredicisocial.com
+          <a className="font-medium text-black underline" href="mailto:hello@cafenelo.com">
+            hello@cafenelo.com
           </a>{' '}
           {isSpanish ? 'y te responderemos pronto.' : 'and we will get back to you soon.'}
         </p>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-const LANGUAGE_STORAGE_KEY = 'melodi-nails:language';
+const LANGUAGE_STORAGE_KEY = 'cafe-nelo:language';
 
 const LanguageContext = createContext(null);
 

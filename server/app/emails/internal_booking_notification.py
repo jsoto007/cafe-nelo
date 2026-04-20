@@ -65,7 +65,7 @@ def _build_calendar_attachment(
 ) -> str:
     lines = [
         "BEGIN:VCALENDAR",
-        "PRODID:-//Tredici Social//Booking Notification//EN",
+        "PRODID:-//Café Nelo//Booking Notification//EN",
         "VERSION:2.0",
         "METHOD:REQUEST",
         "BEGIN:VEVENT",
@@ -157,9 +157,9 @@ def send_internal_booking_notification(
         manage_url,
     )
     reservation_location = current_app.config.get("BOOKING_LOCATION_NAME") or brand
-    organizer_email = current_app.config.get("MAILGUN_FROM") or f"no-reply@{current_app.config.get('MAILGUN_DOMAIN') or 'mail.tredicisocial.com'}"
+    organizer_email = current_app.config.get("MAILGUN_FROM") or f"no-reply@{current_app.config.get('MAILGUN_DOMAIN') or 'mail.cafenelo.com'}"
     internal_email = (
-        current_app.config.get("INTERNAL_BOOKING_NOTIFICATION_EMAIL") or "reservations@tredicisocial.com"
+        current_app.config.get("INTERNAL_BOOKING_NOTIFICATION_EMAIL") or "reservations@cafenelo.com"
     )
 
     calendar_invite_text: str | None = None

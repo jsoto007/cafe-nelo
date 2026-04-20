@@ -7,22 +7,22 @@ import SectionTitle from '../components/SectionTitle.jsx';
 const FEATURED = [
   {
     id: 'f1',
-    category: 'Antipasto',
+    category: 'Starters',
     name: 'Polpo alla Griglia',
     description: 'Grilled Spanish octopus, Calabrian chili, white bean purée, pickled celery, smoked paprika oil',
-    accent: '#6B1528',
+    accent: '#9E4E22',
   },
   {
     id: 'f2',
     category: 'Pasta',
     name: 'Tagliatelle al Ragù',
     description: 'Fresh egg tagliatelle, slow-braised Wagyu beef and pork ragù, Parmigiano-Reggiano',
-    accent: '#9B2335',
+    accent: '#C4622D',
     badge: 'House Signature',
   },
   {
     id: 'f3',
-    category: 'Secondi',
+    category: 'Mains',
     name: 'Costata di Manzo',
     description: '28-day dry-aged bone-in ribeye, rosemary-garlic compound butter, natural jus',
     accent: '#BFA882',
@@ -30,10 +30,10 @@ const FEATURED = [
   },
   {
     id: 'f4',
-    category: 'Dolci',
+    category: 'Dessert',
     name: 'Tiramisù della Casa',
     description: 'Classic house tiramisù, espresso-soaked ladyfingers, mascarpone, Valrhona cocoa',
-    accent: '#2E1F18',
+    accent: '#2A4038',
     badge: 'House Signature',
   },
 ];
@@ -46,7 +46,7 @@ export default function MenuHighlights() {
           <SectionTitle
             eyebrow="From Our Kitchen"
             title="Dishes worth the drive"
-            description="A few of the plates that define Tredici Social — rooted in Italian craft, made with obsessive care."
+            description="A few of the plates that define Café Nelo — global flavors, obsessive craft."
             light
           />
           <Link
@@ -68,7 +68,7 @@ export default function MenuHighlights() {
           {FEATURED.map((dish) => (
             <div
               key={dish.id}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#2E1F18] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-card-hover"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#2A4038] transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-card-hover"
             >
               {/* Color accent bar */}
               <div

@@ -135,7 +135,7 @@ export default function StudioHours() {
         loading: 'Cargando horario del restaurant...',
         fallback: 'Actualmente no aceptamos visitas sin cita.',
         defaultDescription:
-          'Tredici Social trabaja con cita previa para que cada manicure, pedicure o servicio de acrilico tenga el tiempo necesario para una buena preparacion, detalle y acabado pulido.',
+          'Café Nelo opera con reserva previa para que cada visita tenga el tiempo correcto, la atencion necesaria y una experiencia sin prisa.',
         error: 'No se pudo cargar el horario del restaurant en este momento.',
       }
     : {
@@ -147,7 +147,7 @@ export default function StudioHours() {
         loading: 'Loading studio hours...',
         fallback: 'Currently not accepting walk-ins.',
         defaultDescription:
-          'Tredici Social works by reservation so each manicure, pedicure, or acrylic service has enough time for proper prep, detail work, and a polished finish.',
+          'Café Nelo operates by reservation so each visit has the right amount of time, proper attention, and a dining experience that is never rushed.',
         error: 'Unable to load studio hours right now.',
       };
 

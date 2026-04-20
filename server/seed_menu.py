@@ -2,7 +2,7 @@
 Seed menu categories, menu items, and daily specials into the database.
 
 Menu data: sourced from the project's menu.json (the restaurant's full structured menu).
-Specials data: sourced from https://tredicisocial.com/specials (live as of March 31, 2026).
+Specials data: sourced from https://cafenelo.com/specials.
 
 Run from the server/ directory:
     python seed_menu.py
@@ -226,7 +226,7 @@ MENU = [
         "display_order": 5,
         "items": [
             {
-                "name": "Tredici Negroni",
+                "name": "Nelo Negroni",
                 "description": "Gin, Campari, sweet vermouth, charred orange — our house twist on the classic",
                 "price_cents": 1600,
                 "tags": ["signature"],
@@ -278,7 +278,7 @@ MENU = [
 ]
 
 # ---------------------------------------------------------------------------
-# Daily specials — sourced from tredicisocial.com/specials
+# Daily specials
 # ---------------------------------------------------------------------------
 
 SPECIALS = [

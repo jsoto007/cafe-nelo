@@ -11,7 +11,7 @@ from flask import current_app
 from .base import brand_name, client_base_url, email_logo_url, mailgun_send
 
 DEFAULT_STUDIO_LOCATION = ""
-BOOKING_SUPPORT_EMAIL = "reservations@tredicisocial.com"
+BOOKING_SUPPORT_EMAIL = "reservations@cafenelo.com"
 NYC_TZ = ZoneInfo("America/New_York")
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -131,14 +131,14 @@ def send_booking_confirmation_email(
             f"&details={quote_plus(description)}"
             f"&location={quote_plus(studio_location)}"
         )
-        event_uid = f"{reference}-{reservation.id}@mail.tredicisocial.com"
+        event_uid = f"{reference}-{reservation.id}@mail.cafenelo.com"
         dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         ics_lines = [
             "BEGIN:VCALENDAR",
             "VERSION:2.0",
             "CALSCALE:GREGORIAN",
             "METHOD:PUBLISH",
-            "PRODID:-//Tredici Social//Booking Confirmation//EN",
+            "PRODID:-//Café Nelo//Booking Confirmation//EN",
             "BEGIN:VEVENT",
             f"UID:{event_uid}",
             f"DTSTAMP:{dtstamp}",

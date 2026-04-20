@@ -9,9 +9,9 @@ import GalleryPage from './pages/GalleryPage.jsx';
 import PrivateEventsPage from './pages/PrivateEventsPage.jsx';
 import SpecialsPage from './pages/SpecialsPage.jsx';
 
-function OpenTableRedirect() {
+function ResyRedirect() {
   useEffect(() => {
-    window.location.replace('https://www.opentable.com/r/tredici-social-bronxville');
+    window.location.replace('https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo');
   }, []);
   return null;
 }
@@ -45,8 +45,8 @@ export default function App() {
         <Route path="/private-events" element={<PrivateEventsPage />} />
         <Route path="/specials" element={<SpecialsPage />} />
 
-        {/* /reservations: bounce to OpenTable */}
-        <Route path="/reservations" element={<OpenTableRedirect />} />
+        {/* /reservations: bounce to Resy */}
+        <Route path="/reservations" element={<ResyRedirect />} />
 
         {/* Admin / operational routes — not in public nav */}
         <Route path="/auth" element={<AuthPage />} />

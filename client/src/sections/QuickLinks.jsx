@@ -16,8 +16,8 @@ const TILES = [
   },
   {
     label: 'Reservations',
-    description: 'Book your table on OpenTable',
-    href: 'https://www.opentable.com/r/tredici-social-bronxville',
+    description: 'Book your table on Resy',
+    href: 'https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo',
     external: true,
     icon: (
       <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

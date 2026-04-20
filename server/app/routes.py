@@ -4932,7 +4932,7 @@ def admin_delete_reservation_asset(reservation_id, asset_id):
 
 
 # ---------------------------------------------------------------------------
-# Tredici Social — public contact endpoints
+# Café Nelo — public contact endpoints
 # ---------------------------------------------------------------------------
 
 

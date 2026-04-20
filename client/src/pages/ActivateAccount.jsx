@@ -65,7 +65,7 @@ export default function ActivateAccount() {
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-6">
         <SectionTitle
           eyebrow="Account"
-          title="Activate your Tredici Social portal"
+          title="Activate your Café Nelo portal"
           description="Enter the token we emailed you and choose a secure password to start managing your bookings."
         />
         {status ? (

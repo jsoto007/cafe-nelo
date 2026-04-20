@@ -24,11 +24,11 @@ function MichelinBadge({ year }) {
   );
 }
 
-function OpenTableBadge({ year }) {
+function ResyBadge({ year }) {
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-[#DA3743] shadow-[0_8px_30px_rgba(218,55,67,0.35)]">
-        {/* OpenTable fork icon */}
+        {/* Fork icon */}
         <svg viewBox="0 0 32 32" className="h-8 w-8" fill="white" aria-hidden="true">
           <rect x="9" y="3" width="2.5" height="10" rx="1.25" />
           <rect x="14.75" y="3" width="2.5" height="10" rx="1.25" />
@@ -37,7 +37,7 @@ function OpenTableBadge({ year }) {
         </svg>
       </div>
       <div className="text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#DA3743]">Diners&apos; Choice</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#DA3743]">Resy Choice</p>
         <p className="text-[11px] font-semibold text-ts-charcoal">{year}</p>
       </div>
     </div>
@@ -96,10 +96,10 @@ export default function Accolades() {
             {/* Divider — desktop only */}
             <div className="hidden h-24 w-px bg-ts-stone sm:block" aria-hidden="true" />
 
-            {/* OpenTable Diners' Choice */}
-            <OpenTableBadge year="2025" />
-            <OpenTableBadge year="2024" />
-            <OpenTableBadge year="2023" />
+            {/* Resy Dining Choice */}
+            <ResyBadge year="2025" />
+            <ResyBadge year="2024" />
+            <ResyBadge year="2023" />
 
             {/* Divider — desktop only */}
             <div className="hidden h-24 w-px bg-ts-stone sm:block" aria-hidden="true" />
@@ -113,7 +113,7 @@ export default function Accolades() {
 
           {/* Fine print */}
           <p className="text-center text-[11px] text-ts-muted">
-            Michelin Guide NYC · OpenTable Diners&apos; Choice · Westchester Magazine Best Of
+            Michelin Guide NYC · Resy Dining Choice · Westchester Magazine Best Of
           </p>
 
         </FadeIn>

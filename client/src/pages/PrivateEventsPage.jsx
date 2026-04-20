@@ -64,11 +64,11 @@ export default function PrivateEventsPage() {
       <div className="bg-ts-charcoal py-16 text-center">
         <FadeIn immediate className="mx-auto max-w-2xl space-y-3 px-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.5em] text-ts-gold">
-            Tredici Social
+            Café Nelo
           </p>
           <h1 className="font-heading text-5xl font-medium text-white">Private Events</h1>
           <p className="text-sm text-ts-light-text/70">
-            Host your most memorable occasions in the warm, social atmosphere of Tredici Social.
+            Host your most memorable occasions at Café Nelo — an intimate, refined setting that makes every occasion feel effortless.
           </p>
         </FadeIn>
       </div>
@@ -81,7 +81,7 @@ export default function PrivateEventsPage() {
               <SectionTitle
                 eyebrow="Host Your Event"
                 title="An evening worth celebrating"
-                description="From intimate anniversary dinners to full restaurant buyouts, Tredici Social offers tailored private dining experiences backed by our full kitchen and hospitality team."
+                description="From intimate anniversary dinners to full restaurant buyouts, Café Nelo offers tailored private dining experiences backed by our full kitchen and hospitality team."
               />
               <ul className="space-y-3">
                 {[

@@ -31,7 +31,7 @@ export default function AuthPage() {
 
 
 
-  const heroTitle = 'Tredici Social Staff Portal';
+  const heroTitle = 'Café Nelo Staff Portal';
   const heroDescription = 'Sign in to manage the menu, daily specials, and restaurant settings.';
 
   const handleLoginChange = (field) => (event) => {

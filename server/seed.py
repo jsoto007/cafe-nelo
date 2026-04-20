@@ -34,14 +34,14 @@ from seed_menu import MENU, SPECIALS
 
 PRIMARY_ADMIN = {
     "name": "Giovanni Rossi",
-    "email": "giovanni@tredicisocial.com",
+    "email": "admin@cafenelo.com",
     "password": "Aguacate@@1",
 }
 
 DEMO_USER = {
     "first_name": "Demo",
     "last_name": "Diner",
-    "email": "demo@tredicisocial.local",
+    "email": "demo@cafenelo.local",
     "phone": "+1-555-555-0147",
     "password": "DemoPassword2024!",
 }
@@ -192,12 +192,12 @@ def ensure_reservation(admin, user):
     if not admin or not user:
         return False
 
-    existing = RestaurantReservation.query.filter_by(reference_code="TREDICI-SEED-01").first()
+    existing = RestaurantReservation.query.filter_by(reference_code="NELO-SEED-01").first()
     if existing:
         return False
 
     reservation = RestaurantReservation(
-        reference_code="TREDICI-SEED-01",
+        reference_code="NELO-SEED-01",
         client=user,
         assigned_admin=admin,
         status="confirmed",
@@ -561,8 +561,7 @@ def main():
         except OperationalError as exc:
             raise RuntimeError(
                 "Database connection failed while rebuilding/seeding. "
-                "Check DATABASE_URL/DATABASE_URI, confirm it ends in /tredicy_db, "
-                "and verify the Render Postgres host is the correct internal or external URL."
+                "Check DATABASE_URL/DATABASE_URI and verify the Render Postgres host is the correct internal or external URL."
             ) from exc
 
 

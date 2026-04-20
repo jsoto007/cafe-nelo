@@ -142,29 +142,38 @@ export default function Footer() {
           {/* Brand column */}
           <div className="space-y-5">
             <div>
-              <p className="font-heading text-2xl font-medium tracking-[0.1em] text-white">Tredici Social</p>
+              <p className="font-heading text-2xl font-medium tracking-[0.1em] text-white">Café Nelo</p>
               <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.45em] text-ts-gold">
-                Contemporary Italian · Bronxville, NY
+                Global Fusion · Bronxville, NY
               </p>
             </div>
             <address className="space-y-1 text-sm not-italic leading-relaxed text-ts-light-text/70">
-              <p>104 Kraft Ave</p>
+              <p>102 Kraft Ave</p>
               <p>Bronxville, NY 10708</p>
             </address>
             <div className="space-y-1 text-sm text-ts-light-text/70">
               <a
-                href="tel:+19145550013"
+                href="tel:+19147797777"
                 className="block transition hover:text-white"
-                aria-label="Call Tredici Social"
+                aria-label="Call Café Nelo"
               >
-                (914) 555-0013
+                (914) 779-7777
               </a>
               <a
-                href="mailto:hello@tredicisocial.com"
+                href="mailto:hello@cafenelo.com"
                 className="block transition hover:text-white"
-                aria-label="Email Tredici Social"
+                aria-label="Email Café Nelo"
               >
-                hello@tredicisocial.com
+                hello@cafenelo.com
+              </a>
+              <a
+                href="https://www.instagram.com/cafenelo/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block transition hover:text-ts-gold"
+                aria-label="Café Nelo on Instagram"
+              >
+                @cafenelo
               </a>
             </div>
             <a
@@ -205,7 +214,7 @@ export default function Footer() {
                 Specials
               </Link>
               <a
-                href="https://www.opentable.com/r/tredici-social-bronxville"
+                href="https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="transition hover:text-white"
@@ -231,8 +240,8 @@ export default function Footer() {
 
       {/* Bottom bar */}
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-5 text-[11px] text-ts-muted md:flex-row md:items-center md:justify-between">
-        <span className="font-semibold uppercase tracking-[0.3em]">© {year} Tredici Social</span>
-        <span>104 Kraft Ave · Bronxville, NY 10708</span>
+        <span className="font-semibold uppercase tracking-[0.3em]">© {year} Café Nelo</span>
+        <span>102 Kraft Ave · Bronxville, NY 10708</span>
         <Link
           to="/auth"
           className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-ts-light-text/70 transition hover:border-white/40 hover:bg-white/10 hover:text-white"

@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse
 from typing import Any, Dict
 
 from flask import Flask
@@ -48,25 +48,19 @@ def _engine_defaults(app: Flask) -> Dict[str, Any]:
 
 
 def _resolve_database_uri(app: Flask) -> str:
-    """Determine the database URI and require the tredicy_db database."""
+    """Determine and validate the database URI."""
     # Prefer the platform-provided URL when both are present.
     # This avoids a stale DATABASE_URI loaded from a checked-in .env from
     # overriding the current deployment connection string.
     uri = os.getenv("DATABASE_URL") or os.getenv("DATABASE_URI")
     if not uri:
-        raise RuntimeError("DATABASE_URL or DATABASE_URI must be set and point to the /tredicy_db database.")
+        raise RuntimeError("DATABASE_URL or DATABASE_URI must be set.")
 
     parsed = urlparse(uri)
     if parsed.scheme.startswith("sqlite"):
         if os.getenv("PYTEST_CURRENT_TEST"):
             return uri
         raise RuntimeError("SQLite DATABASE_URL/DATABASE_URI is only allowed during automated tests.")
-
-    database_name = unquote(parsed.path.lstrip("/"))
-    if database_name != "tredicy_db":
-        raise RuntimeError(
-            f"DATABASE_URL/DATABASE_URI must target the /tredicy_db database, got /{database_name or '<missing>'}."
-        )
 
     return uri
 
@@ -140,10 +134,10 @@ def configure_app(app: Flask) -> SQLAlchemy:
     app.config["MAILGUN_API_KEY"] = os.getenv("MAILGUN_API_KEY")
     app.config["MAILGUN_FROM"] = os.getenv("MAILGUN_FROM") or os.getenv("MAILGUN_FROM_EMAIL")
     app.config["INTERNAL_BOOKING_NOTIFICATION_EMAIL"] = os.getenv(
-        "INTERNAL_BOOKING_NOTIFICATION_EMAIL", "reservations@tredicisocial.com"
+        "INTERNAL_BOOKING_NOTIFICATION_EMAIL", "reservations@cafenelo.com"
     )
     app.config["CLIENT_BASE_URL"] = os.getenv("CLIENT_BASE_URL")
-    app.config["BRAND_NAME"] = os.getenv("BRAND_NAME", "Tredici Social")
+    app.config["BRAND_NAME"] = os.getenv("BRAND_NAME", "Café Nelo")
     app.config["EMAIL_LOGO_URL"] = os.getenv("EMAIL_LOGO_URL")
     app.config["BOOKING_LOCATION_NAME"] = os.getenv("BOOKING_LOCATION_NAME") or app.config["BRAND_NAME"]
 

@@ -50,6 +50,7 @@ const ADMIN_NAV_ITEMS = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const menuPanelRef = useRef(null);
   const toggleButtonRef = useRef(null);
   const location = useLocation();
@@ -107,10 +108,19 @@ export default function Header() {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* Logo / wordmark */}
-        <Link to="/" className="flex flex-col leading-none focus:outline-none focus-visible:underline" aria-label="Tredici Social — home">
-          <span className="font-heading text-xl font-medium tracking-[0.12em] text-white">
-            Tredici Social
-          </span>
+        <Link to="/" className="flex flex-col leading-none focus:outline-none focus-visible:underline" aria-label="Café Nelo — home">
+          {logoError ? (
+            <span className="font-heading text-xl font-medium tracking-[0.12em] text-white">
+              Café Nelo
+            </span>
+          ) : (
+            <img
+              src="/logo.svg"
+              alt="Café Nelo"
+              className="h-10 w-auto object-contain"
+              onError={() => setLogoError(true)}
+            />
+          )}
           <span className="text-[9px] font-semibold uppercase tracking-[0.5em] text-ts-gold">
             Bronxville · New York
           </span>
@@ -137,11 +147,11 @@ export default function Header() {
           </button>
         ) : (
           <a
-            href="https://www.opentable.com/r/tredici-social-bronxville"
+            href="https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden rounded-full border border-ts-crimson bg-ts-crimson px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.25em] text-white transition hover:bg-ts-garnet md:inline-flex"
-            aria-label="Reserve a table on OpenTable"
+            aria-label="Reserve a table on Resy"
           >
             Reserve
           </a>
@@ -150,11 +160,11 @@ export default function Header() {
         {/* Mobile icon group */}
         <div className="flex items-center gap-2 md:hidden">
           <a
-            href="https://www.opentable.com/r/tredici-social-bronxville"
+            href="https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo"
             target="_blank"
             rel="noopener noreferrer"
             className={iconBtnClass.replace('md:hidden', '')}
-            aria-label="Reserve a table on OpenTable"
+            aria-label="Reserve a table on Resy"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="3.5" y="4.5" width="17" height="16" rx="2" />
@@ -190,7 +200,7 @@ export default function Header() {
         <div
           id="mobile-navigation"
           ref={menuPanelRef}
-          className="border-t border-white/10 bg-[#2E1F18] px-6 py-5 md:hidden"
+          className="border-t border-white/10 bg-[#2A4038] px-6 py-5 md:hidden"
         >
           {isAdmin && (
             <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.4em] text-ts-gold">
@@ -215,13 +225,13 @@ export default function Header() {
             </button>
           ) : (
             <a
-              href="https://www.opentable.com/r/tredici-social-bronxville"
+              href="https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 block w-full rounded-full bg-ts-crimson py-3 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-white transition hover:bg-ts-garnet"
               onClick={closeMenu}
             >
-              Reserve on OpenTable
+              Reserve on Resy
             </a>
           )}
         </div>

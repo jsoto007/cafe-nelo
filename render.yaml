@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: tredicy-full-stack
+    name: cafe-nelo
     env: python
     buildCommand: npm ci --prefix client && npm run build --prefix client && pip install -r server/requirements.txt
     startCommand: cd server && flask --app wsgi db upgrade && exec gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers ${WEB_CONCURRENCY:-4} --timeout 120

@@ -9,17 +9,17 @@
 
   :root {
     color-scheme: light;
-    /* Tredici Social design tokens */
-    --ts-charcoal: #1c1410;
-    --ts-crimson: #9b2335;
-    --ts-scarlet: #c41e3a;
-    --ts-garnet: #6b1528;
+    /* Café Nelo design tokens */
+    --ts-charcoal: #1b3028;
+    --ts-crimson: #D4622A;
+    --ts-scarlet: #d4855a;
+    --ts-garnet: #9e4e22;
     --ts-gold: #bfa882;
-    --ts-cream: #faf7f4;
-    --ts-linen: #f0ebe4;
+    --ts-cream: #faf7f2;
+    --ts-linen: #f0ebe0;
     --ts-stone: #d9d0c5;
     --ts-muted: #7d6e63;
-    --ts-dark-text: #2a2420;
+    --ts-dark-text: #1a2922;
     --ts-light-text: #f5f0eb;
   }
 
@@ -61,7 +61,7 @@
   }
 
   ::selection {
-    background-color: rgba(155, 35, 53, 0.88);
+    background-color: rgba(196, 98, 45, 0.88);
     color: #f5f0eb;
   }
 

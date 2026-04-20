@@ -7,16 +7,16 @@ import SectionTitle from '../components/SectionTitle.jsx';
 import { apiGet, resolveApiUrl } from '../lib/api.js';
 import { thumbSrcSet, thumbUrl } from '../lib/image.js';
 
-const INSTAGRAM_URL = 'https://www.instagram.com/tredici.social/';
+const INSTAGRAM_URL = 'https://www.instagram.com/cafenelo/';
 
 // Fallback placeholders shown while loading or when fewer than 6 photos are placed.
 const FALLBACK_ITEMS = [
-  { src: null, alt: 'Tagliatelle al Ragù — slow-braised Wagyu', color: 'linear-gradient(135deg, #6B1528 0%, #9B2335 100%)' },
-  { src: null, alt: 'Tredici Social dining room', color: 'linear-gradient(135deg, #2E1F18 0%, #1C1410 100%)' },
-  { src: null, alt: 'Burrata con Prosciutto', color: 'linear-gradient(135deg, #BFA882 0%, #8A6E4A 100%)' },
-  { src: null, alt: 'The bar at Tredici Social', color: 'linear-gradient(135deg, #1C1410 0%, #3a2218 100%)' },
-  { src: null, alt: 'Costata di Manzo — dry-aged ribeye', color: 'linear-gradient(135deg, #9B2335 0%, #6B1528 100%)' },
-  { src: null, alt: 'Tiramisù della Casa', color: 'linear-gradient(135deg, #3a2218 0%, #BFA882 100%)' },
+  { src: null, alt: 'Café Nelo — signature dish', color: 'linear-gradient(135deg, #9E4E22 0%, #C4622D 100%)' },
+  { src: null, alt: 'Café Nelo dining room', color: 'linear-gradient(135deg, #2A4038 0%, #1B3028 100%)' },
+  { src: null, alt: 'Café Nelo — seasonal starter', color: 'linear-gradient(135deg, #BFA882 0%, #8A6E4A 100%)' },
+  { src: null, alt: 'The bar at Café Nelo', color: 'linear-gradient(135deg, #1B3028 0%, #2A4038 100%)' },
+  { src: null, alt: 'Café Nelo — main course', color: 'linear-gradient(135deg, #C4622D 0%, #9E4E22 100%)' },
+  { src: null, alt: 'Café Nelo — dessert', color: 'linear-gradient(135deg, #2A4038 0%, #BFA882 100%)' },
 ];
 
 export default function Gallery() {
@@ -93,7 +93,7 @@ export default function Gallery() {
           <SectionTitle
             eyebrow="Gallery"
             title="A taste of the experience"
-            description="Food, space, and atmosphere — a look inside Tredici Social."
+            description="Food, space, and atmosphere — a look inside Café Nelo."
           />
           <Link
             to="/gallery"

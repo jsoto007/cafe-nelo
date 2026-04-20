@@ -5,9 +5,9 @@ export default function CustomFineLine() {
   const copy = isSpanish
     ? {
         eyebrow: 'Detras del set',
-        title: 'Como se crea un set exclusivo en Tredici Social',
+        title: 'Como se crea un set exclusivo en Café Nelo',
         intro:
-          'Un set exclusivo es mucho mas que esmalte y color. En Tredici Social, el proceso se construye alrededor de preparacion, estructura, forma y acabado para que el resultado se vea intencional, favorecedor y duradero.',
+          'Un set exclusivo es mucho mas que esmalte y color. En Café Nelo, el proceso se construye alrededor de preparacion, estructura, forma y acabado para que el resultado se vea intencional, favorecedor y duradero.',
         sections: [
           {
             title: 'Consulta y vision creativa',
@@ -37,15 +37,15 @@ export default function CustomFineLine() {
           {
             title: 'Una experiencia personalizada',
             body:
-              'Tredici Social esta construido alrededor del detalle, el cuidado y la constancia. Eso significa un servicio personal, un proceso sin prisa y unas terminadas que se mantienen hermosas entre visitas.',
+              'Café Nelo esta construido alrededor del detalle, el cuidado y la constancia. Eso significa un servicio personal, un proceso sin prisa y unas terminadas que se mantienen hermosas entre visitas.',
           },
         ],
       }
     : {
         eyebrow: 'Behind the set',
-        title: 'How a Signature Table Set Comes to Life at Tredici Social',
+        title: 'How a Signature Table Set Comes to Life at Café Nelo',
         intro:
-          'A signature nail set is more than polish and color. At Tredici Social, the process is built around prep, structure, shaping, and finish so the final look feels intentional, flattering, and wearable beyond the day of the reservation.',
+          'A signature nail set is more than polish and color. At Café Nelo, the process is built around prep, structure, shaping, and finish so the final look feels intentional, flattering, and wearable beyond the day of the reservation.',
         sections: [
           {
             title: 'Consultation and Creative Vision',
@@ -75,7 +75,7 @@ export default function CustomFineLine() {
           {
             title: 'A Personalized Restaurant Experience',
             body:
-              "Tredici Social is built around detail, care, and consistency. The goal is not just a beautiful result on the day of the reservation, but a set that fits the client's style, routine, and maintenance preferences.",
+              "Café Nelo is built around detail, care, and consistency. The goal is not just a beautiful result on the day of the reservation, but a set that fits the client's style, routine, and maintenance preferences.",
           },
         ],
       };

@@ -9,9 +9,9 @@ import { formatStatusLabel, getStatusBadgeClasses } from '../lib/statusStyles.js
 import { apiGet, apiPost } from '../lib/api.js';
 import { sanitizeReservationForConfirmation } from '../lib/reservations.js';
 
-const BOOKING_RECEIPT_KEY = 'melodi-nails:last-booking';
-const LOCATION_LINE = '1205 College Ave, Bronx, NY 10456';
-const STUDIO_EMAIL = 'melodinails@mail.sotodev.com';
+const BOOKING_RECEIPT_KEY = 'cafe-nelo:last-booking';
+const LOCATION_LINE = '102 Kraft Ave, Bronxville, NY 10708';
+const STUDIO_EMAIL = 'hello@cafenelo.com';
 const DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(LOCATION_LINE)}`;
 function readLatestReservation() {
   try {
@@ -293,7 +293,7 @@ export default function BookingConfirmation() {
               ? 'Keep this page open for a moment while we verify the Stripe session. If payment does not complete, the temporary hold will expire and the reservation will not be booked.'
               : isPaymentFailed
                 ? 'If Stripe charged your card but this page still shows a failed payment, verify the Stripe receipt first and then review the webhook logs before manually creating or confirming an reservation.'
-              : <>If you don’t see the email, double-check your spam or promotions folder and look for an email from <span className="font-semibold">melodinails@mail.sotodev.com</span>. The confirmation includes Google and Apple calendar options so you can lock in the time.</>}
+              : <>If you don’t see the email, double-check your spam or promotions folder and look for an email from <span className="font-semibold">hello@cafenelo.com</span>. The confirmation includes Google and Apple calendar options so you can lock in the time.</>}
           </p>
         </FadeIn>
 

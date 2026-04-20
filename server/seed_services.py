@@ -19,125 +19,59 @@ from app.models import SessionOption
 
 SERVICES = [
     {
-        "name": "Manicura Rusa",
-        "tagline": "Acabado limpio",
+        "name": "Chef's Tasting Menu",
+        "tagline": "The full experience",
         "description": (
-            "Manicure en seco enfocado en cuticula detallada, refinamiento de la piel, "
-            "esmalte semipermanente y calcio gel para un acabado natural y pulido."
+            "A multi-course progression curated by the kitchen — seasonal, composed, and paired on request. "
+            "Designed for guests who want to leave the decisions to us."
         ),
-        "category": "Manicura",
+        "category": "Tasting",
+        "duration_minutes": 150,
+        "price_cents": 12500,
+    },
+    {
+        "name": "Private Dining Experience",
+        "tagline": "The room is yours",
+        "description": (
+            "Exclusive use of our private dining room for up to 14 guests. Custom menu, "
+            "dedicated service staff, and full beverage program coordination."
+        ),
+        "category": "Private Events",
+        "duration_minutes": 180,
+        "price_cents": 0,
+    },
+    {
+        "name": "Wine Pairing Dinner",
+        "tagline": "Glass for glass",
+        "description": (
+            "A four-course dinner with sommelier-selected wines poured alongside each course. "
+            "Available by reservation for two or more guests."
+        ),
+        "category": "Tasting",
+        "duration_minutes": 120,
+        "price_cents": 9500,
+    },
+    {
+        "name": "Brunch Reservation",
+        "tagline": "Weekend mornings done right",
+        "description": (
+            "Weekend brunch service. Reserve ahead for parties of four or more — "
+            "walk-ins welcome based on availability."
+        ),
+        "category": "Dining",
         "duration_minutes": 90,
-        "price_cents": 5000,
+        "price_cents": 0,
     },
     {
-        "name": "Uñas con Pintura en Gel",
-        "tagline": "Color duradero",
+        "name": "Bar Counter Seating",
+        "tagline": "Front row at the pass",
         "description": (
-            "Uñas acrílicas transparentes terminadas con esmalte semipermanente en gel "
-            "en el tono que elijas para un acabado brillante y de larga duración."
+            "Up to four seats at the chef's bar counter, offering an intimate view of the kitchen "
+            "and a more casual, conversational dining experience."
         ),
-        "category": "Manicura",
-        "duration_minutes": 75,
-        "price_cents": 5000,
-    },
-    {
-        "name": "Acrílico de Color",
-        "tagline": "Color intenso",
-        "description": (
-            "Set completo de acrílico en el color de tu elección para uñas duraderas y "
-            "llamativas adaptadas al largo y forma que prefieras."
-        ),
-        "category": "Manicura",
-        "duration_minutes": 120,
-        "price_cents": 6500,
-    },
-    {
-        "name": "Retoque en Acrílico de Color",
-        "tagline": "Color recargado",
-        "description": (
-            "Relleno de acrílico de color en el área de crecimiento para mantener tus uñas "
-            "perfectas sin necesidad de hacer un set completo."
-        ),
-        "category": "Retoques",
-        "duration_minutes": 60,
-        "price_cents": 5500,
-    },
-    {
-        "name": "Retoque de Acrílico Cristal",
-        "tagline": "Cristal renovado",
-        "description": (
-            "Relleno de acrílico cristal con esmalte semipermanente para mantener el brillo "
-            "y la estructura de tus uñas entre visitas."
-        ),
-        "category": "Retoques",
-        "duration_minutes": 60,
-        "price_cents": 4000,
-    },
-    {
-        "name": "Baby Boomer",
-        "tagline": "Difuminado suave",
-        "description": (
-            "Degradé en acrílico entre dos tonos para un look suave, elegante y siempre "
-            "listo para foto. Ideal para quienes buscan un estilo atemporal."
-        ),
-        "category": "Diseños Premium",
-        "duration_minutes": 120,
-        "price_cents": 7000,
-    },
-    {
-        "name": "French Perfecto",
-        "tagline": "Detalle distintivo",
-        "description": (
-            "Acabado francés preciso sobre una base acrílica estructurada, ideal para "
-            "líneas limpias y un set atemporal que siempre luce impecable."
-        ),
-        "category": "Diseños Premium",
-        "duration_minutes": 120,
-        "price_cents": 9000,
-    },
-    {
-        "name": "Acrílico de Color + French",
-        "tagline": "Color con francés",
-        "description": (
-            "Acrílico de color con puntas en gel francés para un acabado elegante de "
-            "doble impacto que combina color y el clásico estilo francés."
-        ),
-        "category": "Diseños Premium",
-        "duration_minutes": 105,
-        "price_cents": 7500,
-    },
-    {
-        "name": "Pedicura en Gel",
-        "tagline": "Cuidado suave",
-        "description": (
-            "Limpieza de uñas y pies, exfoliación, hidratación y color en gel "
-            "semipermanente de larga duración en el tono que prefieras."
-        ),
-        "category": "Pedicura",
-        "duration_minutes": 60,
-        "price_cents": 4500,
-    },
-    {
-        "name": "Derretido de Uñas Acrílicas",
-        "tagline": "Remoción segura",
-        "description": (
-            "Remoción de uñas acrílicas con acetona pura y agua caliente para un "
-            "proceso limpio, seguro y sin daño a la uña natural."
-        ),
-        "category": "Tratamientos",
-        "duration_minutes": 30,
-        "price_cents": 1000,
-    },
-    {
-        "name": "Tratamiento de Parafina",
-        "tagline": "Hidratación extra",
-        "description": (
-            "Tratamiento tibio de parafina para manos o pies que aporta hidratación, "
-            "comodidad y mejora la circulación como complemento de tu visita."
-        ),
-        "category": "Tratamientos",
-        "duration_minutes": 15,
-        "price_cents": 1000,
+        "category": "Dining",
+        "duration_minutes": 90,
+        "price_cents": 0,
     },
 ]
 

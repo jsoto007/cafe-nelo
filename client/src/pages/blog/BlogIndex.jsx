@@ -5,9 +5,9 @@ export default function BlogIndex() {
   const { isSpanish } = useLanguage();
   const copy = isSpanish
     ? {
-        title: 'Journal de Tredici Social',
+        title: 'Journal de Café Nelo',
         description:
-          'Compartimos respuestas utiles sobre el restaurant, recomendaciones de cuidado y consejos para prepararte para tu proximo manicure, pedicure, gel o acrilico en el Bronx.',
+          'Compartimos respuestas utiles sobre el restaurant, recomendaciones y consejos para prepararte para tu proxima visita a Café Nelo en Bronxville, NY.',
         featured: 'Destacado',
         readMore: 'Leer mas ->',
         posts: [
@@ -20,21 +20,21 @@ export default function BlogIndex() {
           {
             title: 'Preguntas Frecuentes del Restaurant',
             description:
-              'Respuestas claras sobre reservas, preparacion, reparaciones, tiempos y lo que puedes esperar en Tredici Social.',
+              'Respuestas claras sobre reservas, preparacion, reparaciones, tiempos y lo que puedes esperar en Café Nelo.',
             to: 'faq',
           },
           {
             title: 'Como se crea un set exclusivo',
             description:
-              'Una mirada al proceso de preparacion, estructura, forma y acabado de Tredici Social para resultados pulidos y listos para foto.',
+              'Una mirada al proceso de preparacion, estructura, forma y acabado de Café Nelo para resultados pulidos y listos para foto.',
             to: 'custom-fine-line',
           },
         ],
       }
     : {
-        title: 'Tredici Social Journal',
+        title: 'Café Nelo Journal',
         description:
-          'We use this space to answer common restaurant questions, share aftercare guidance, and help clients prepare for their next manicure, pedicure, acrylic, or gel reservation in the Bronx.',
+          'We use this space to answer common restaurant questions, share dining guidance, and help guests prepare for their next visit to Café Nelo in Bronxville, NY.',
         featured: 'Featured',
         readMore: 'Read more ->',
         posts: [
@@ -46,13 +46,13 @@ export default function BlogIndex() {
           },
           {
             title: 'Table Restaurant FAQ',
-            description: 'Clear answers about booking, prep, repairs, timing, and what to expect at Tredici Social.',
+            description: 'Clear answers about booking, prep, repairs, timing, and what to expect at Café Nelo.',
             to: 'faq',
           },
           {
             title: 'How a Signature Table Set Comes Together',
             description:
-              "A look at Tredici Social' prep, shaping, structure, and finishing process for polished, photo-ready results.",
+              "A look at Café Nelo' prep, shaping, structure, and finishing process for polished, photo-ready results.",
             to: 'custom-fine-line',
           },
         ],

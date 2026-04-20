@@ -8,16 +8,16 @@ import { thumbSrcSet, thumbUrl } from '../lib/image.js';
 // Fallback gradient panels shown when no photo is placed in a slot.
 // Ordered to match display_order 1–4 (left-col tall, left-col sq, right-col sq, right-col tall).
 const FALLBACK_PANELS = [
-  { label: 'The Room',  color: 'linear-gradient(160deg, #2E1F18 0%, #3a2218 100%)', aspectRatio: '3/4' },
-  { label: 'The Plate', color: 'linear-gradient(160deg, #6B1528 0%, #9B2335 100%)', aspectRatio: '1/1' },
+  { label: 'The Room',  color: 'linear-gradient(160deg, #2A4038 0%, #1B3028 100%)', aspectRatio: '3/4' },
+  { label: 'The Plate', color: 'linear-gradient(160deg, #9E4E22 0%, #C4622D 100%)', aspectRatio: '1/1' },
   { label: 'The Bar',   color: 'linear-gradient(160deg, #BFA882 0%, #8A6E4A 100%)', aspectRatio: '1/1' },
-  { label: 'The Pasta', color: 'linear-gradient(160deg, #1C1410 0%, #2E1F18 100%)', aspectRatio: '3/4' },
+  { label: 'The Table', color: 'linear-gradient(160deg, #1B3028 0%, #2A4038 100%)', aspectRatio: '3/4' },
 ];
 
 const HIGHLIGHTS = [
-  'Inventive Italian cuisine rooted in regional tradition',
-  'Thoughtfully sourced ingredients, seasonal menus',
-  'Warm, neighborhood atmosphere — social by design',
+  'Global flavors crafted with refined technique and intention',
+  'Thoughtfully sourced ingredients, seasonally inspired menus',
+  'Warm, intimate atmosphere — designed for lingering',
 ];
 
 export default function About() {
@@ -57,8 +57,8 @@ export default function About() {
         <div className="space-y-8">
           <SectionTitle
             eyebrow="Our Story"
-            title="Where Italian tradition meets Bronxville's table"
-            description="Tredici Social was born from a simple belief: that exceptional Italian food should feel both elevated and welcoming. We draw from the deep well of regional Italian cooking — pasta made by hand, sauces built slowly, proteins chosen with care — and present it in a way that invites conversation, lingering, and returning."
+            title="Where global flavors meet Bronxville's table"
+            description="Café Nelo was born from a love of travel and flavor — a place where global culinary traditions meet the warmth of neighborhood hospitality. Each dish reflects a journey: thoughtfully composed, carefully crafted, and meant to be shared."
           />
 
           <ul className="space-y-3">
@@ -79,7 +79,7 @@ export default function About() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <a
-              href="https://www.opentable.com/r/tredici-social-bronxville"
+              href="https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center rounded-full bg-ts-crimson px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-white shadow-crimson transition hover:bg-ts-garnet"

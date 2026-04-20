@@ -31,7 +31,7 @@ export default function RestaurantAftercare() {
         ],
         reachTitle: 'Cuando escribirnos',
         reach:
-          'Escribenos si necesitas una reparacion, si no sabes si reservar retiro o relleno, o si quieres ayuda para elegir tu proximo servicio. Puedes comunicarte con Tredici Social en info@tredicisocial.com o reservar para el estudio del Bronx en 1205 College Ave.',
+          'Escribenos si tienes preguntas sobre tu reserva o quieres ayuda para planear tu proxima visita. Puedes comunicarte con Café Nelo en hello@cafenelo.com o reservar en 102 Kraft Ave, Bronxville, NY.',
       }
     : {
         eyebrow: 'Aftercare',
@@ -61,7 +61,7 @@ export default function RestaurantAftercare() {
         ],
         reachTitle: 'When to Reach Out',
         reach:
-          'Reach out if you need a repair, are unsure whether to book a removal or fill, or want help choosing the right service for your next visit. Reservations are available for the Bronx studio at 1205 College Ave.',
+          'Reach out if you have questions about your reservation or want help planning your next visit. Reservations are available at 102 Kraft Ave, Bronxville, NY.',
       };
   return (
     <article className="space-y-10 text-base leading-relaxed text-gray-600">
@@ -111,7 +111,7 @@ export default function RestaurantAftercare() {
         <h2 className="text-2xl font-semibold text-gray-900">{copy.reachTitle}</h2>
         <p>
           {copy.reach} {isSpanish ? 'Escribenos a' : 'Email us at'}{' '}
-          <a href="mailto:info@tredicisocial.com">info@tredicisocial.com</a>
+          <a href="mailto:hello@cafenelo.com">hello@cafenelo.com</a>
         </p>
       </section>
     </article>

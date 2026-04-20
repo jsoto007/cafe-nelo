@@ -1,6 +1,5 @@
 import Hero from '../sections/Hero.jsx';
 import QuickLinks from '../sections/QuickLinks.jsx';
-import Accolades from '../sections/Accolades.jsx';
 import About from '../sections/About.jsx';
 import MenuHighlights from '../sections/Services.jsx';
 import Gallery from '../sections/Gallery.jsx';
@@ -12,7 +11,6 @@ export default function Landing() {
     <main>
       <Hero />
       <QuickLinks />
-      <Accolades />
       <About />
       <MenuHighlights />
       <Gallery />

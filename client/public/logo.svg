@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 70" width="260" height="70">
+  <defs>
+    <linearGradient id="copper" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#D4855A"/>
+      <stop offset="50%"  stop-color="#C4622D"/>
+      <stop offset="100%" stop-color="#9E4E22"/>
+    </linearGradient>
+  </defs>
+  <text x="8" y="48"
+        font-family="Georgia,'Times New Roman',serif"
+        font-style="italic"
+        font-size="44"
+        font-weight="bold"
+        fill="url(#copper)"
+        filter="drop-shadow(0 1px 2px rgba(0,0,0,0.35))">Café Nelo</text>
+  <text x="10" y="65"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="10"
+        font-weight="normal"
+        letter-spacing="4"
+        fill="#BFA882"
+        opacity="0.9">BRONXVILLE · NEW YORK</text>
+</svg>

@@ -1,4 +1,4 @@
-// ReservationsBand — dark CTA band encouraging table reservations via OpenTable
+// ReservationsBand — dark CTA band encouraging table reservations via Resy
 import { useEffect, useMemo, useState } from 'react';
 import FadeIn from '../components/FadeIn.jsx';
 import { apiGet } from '../lib/api.js';
@@ -165,15 +165,15 @@ export default function ReservationsBand() {
 
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <a
-            href="https://www.opentable.com/r/tredici-social-bronxville"
+            href="https://resy.com/cities/bronxville-ny-ny/venues/cafe-nelo"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full rounded-full bg-ts-scarlet px-10 py-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-white shadow-crimson transition hover:bg-ts-crimson focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto"
           >
-            Reserve on OpenTable
+            Reserve on Resy
           </a>
           <a
-            href="tel:+19145550013"
+            href="tel:+19147797777"
             className="w-full rounded-full border border-white/30 px-10 py-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-white transition hover:border-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto"
           >
             Call Us
