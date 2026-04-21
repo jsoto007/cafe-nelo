@@ -48,7 +48,7 @@ Unauthorized use, reproduction, or distribution of this Software or any portion 
 For licensing inquiries, permissions, or commercial use requests, contact:
 
 **Soto Dev LLC**
-Email: jsoto7087@gmail.com
+Email: jsoto@sotodev.com
 
 **Cafe Nelo**
 For branding and trademark inquiries related to the Cafe Nelo name and assets, contact Cafe Nelo directly.

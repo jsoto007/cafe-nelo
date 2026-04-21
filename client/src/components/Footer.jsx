@@ -266,6 +266,9 @@ export default function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-5 text-[11px] text-ts-muted md:flex-row md:items-center md:justify-between">
         <span className="font-semibold uppercase tracking-[0.3em]">© {year} Café Nelo</span>
         <span>102 Kraft Ave · Bronxville, NY 10708</span>
+        <Link to="/license" className="transition hover:text-ts-gold">
+          License
+        </Link>
         <Link
           to="/auth"
           className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-ts-light-text/70 transition hover:border-white/40 hover:bg-white/10 hover:text-white"
