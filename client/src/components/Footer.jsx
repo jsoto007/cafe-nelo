@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { apiGet } from '../lib/api.js';
 
 const year = new Date().getFullYear();
@@ -235,6 +236,29 @@ export default function Footer() {
               </a>
             </nav>
           </div>
+        </div>
+      </div>
+
+      {/* QR Code band */}
+      <div className="border-b border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-6 py-10">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.45em] text-ts-gold">
+            Scan for Today's Specials
+          </p>
+          <QRCodeSVG
+            value="https://cafe-nelo.onrender.com/specials"
+            size={140}
+            bgColor="transparent"
+            fgColor="#ffffff"
+            level="H"
+            imageSettings={{
+              src: "/logo.svg",
+              height: 32,
+              width: 32,
+              excavate: true,
+            }}
+          />
+          <p className="text-xs text-ts-light-text/50">cafenelo.com/specials</p>
         </div>
       </div>
 
