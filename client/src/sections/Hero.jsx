@@ -131,15 +131,18 @@ export default function Hero() {
 
         {/* Headline */}
         <h1 className="mb-9 flex flex-col items-center">
-          <span
-            className="font-wordmark block leading-none text-ts-light-text"
-            style={{ fontSize: 'clamp(72px, 12vw, 130px)' }}
-          >
-            Café Nelo
-          </span>
+          <img
+            src="/cafe-nelo-white.svg"
+            alt="Café Nelo"
+            width="600"
+            height="218"
+            style={{ width: 'clamp(260px, 46vw, 560px)', height: 'auto' }}
+            draggable={false}
+            fetchpriority="high"
+          />
           <span
             className="font-heading block italic"
-            style={{ fontSize: 'clamp(13px, 1.6vw, 18px)', letterSpacing: '0.35em', textTransform: 'uppercase', color: '#D4622A', marginTop: '0.5rem', fontWeight: 300 }}
+            style={{ fontSize: 'clamp(13px, 1.6vw, 18px)', letterSpacing: '0.35em', textTransform: 'uppercase', color: '#D4622A', marginTop: '1rem', fontWeight: 300 }}
           >
             Bronxville
           </span>
