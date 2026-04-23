@@ -107,8 +107,8 @@ export default function LicensePage() {
               <p className="font-medium text-gray-800">Soto Dev LLC</p>
               <p>
                 For licensing inquiries, permissions, or commercial use requests:{' '}
-                <a className="underline underline-offset-2 hover:text-gray-900" href="mailto:jsoto7087@gmail.com">
-                  jsoto7087@gmail.com
+                <a className="underline underline-offset-2 hover:text-gray-900" href="mailto:help@sotodev.com">
+                  help@sotodev.com
                 </a>
               </p>
             </div>
