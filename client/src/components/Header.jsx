@@ -50,7 +50,6 @@ const ADMIN_NAV_ITEMS = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [logoError, setLogoError] = useState(false);
   const menuPanelRef = useRef(null);
   const toggleButtonRef = useRef(null);
   const location = useLocation();
@@ -108,22 +107,15 @@ export default function Header() {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* Logo / wordmark */}
-        <Link to="/" className="flex flex-col leading-none focus:outline-none focus-visible:underline" aria-label="Café Nelo — home">
-          {logoError ? (
-            <span className="font-heading text-xl font-medium tracking-[0.12em] text-white">
-              Café Nelo
-            </span>
-          ) : (
-            <img
-              src="/logo.svg"
-              alt="Café Nelo"
-              className="h-10 w-auto object-contain"
-              onError={() => setLogoError(true)}
-            />
-          )}
-          <span className="text-[9px] font-semibold uppercase tracking-[0.5em] text-ts-gold">
-            Bronxville · New York
-          </span>
+        <Link to="/" className="leading-none focus:outline-none focus-visible:underline" aria-label="Café Nelo — home">
+          <img
+            src="/cafe-nelo-white.svg"
+            alt="Café Nelo"
+            width="132"
+            height="48"
+            className="w-auto object-contain"
+            style={{ height: 'clamp(36px, 4vw, 48px)' }}
+          />
         </Link>
 
         {/* Desktop nav */}
