@@ -177,6 +177,36 @@ def create_app():
         db.session.commit()
         click.echo(f"Bootstrap admin created: {email}")
 
+    @app.cli.command("db-bootstrap")
+    def db_bootstrap():
+        """Prepare the database for this release (safe to run on every deploy).
+
+        The migration chain assumes the base tables already exist (it was started
+        on top of a ``db.create_all()`` schema), so ``flask db upgrade`` fails on an
+        empty database. On an empty database this creates every table from the
+        current models and stamps the migration head; on an existing database it
+        applies pending migrations.
+        """
+        from flask_migrate import stamp, upgrade
+        from sqlalchemy import inspect
+
+        inspector = inspect(db.engine)
+        if inspector.has_table("alembic_version"):
+            click.echo("Existing database detected; applying pending migrations.")
+            upgrade()
+            return
+
+        if inspector.get_table_names():
+            raise click.ClickException(
+                "Database has tables but no alembic_version table. "
+                "Inspect it and stamp manually: flask --app wsgi db stamp head"
+            )
+
+        click.echo("Empty database detected; creating schema from models and stamping head.")
+        db.create_all()
+        stamp()
+        click.echo("Schema created and stamped at head.")
+
     @app.cli.command("optimize-uploads")
     @click.option("--max-edge", default=1600, show_default=True, type=int, help="Maximum image edge (px) when optimizing.")
     def optimize_uploads(max_edge: int):
