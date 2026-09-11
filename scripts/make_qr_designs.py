@@ -28,11 +28,36 @@ SERIF_I = lambda s: font(SUP + "Georgia Italic.ttf", s)
 SANS = lambda s: font("/System/Library/Fonts/Helvetica.ttc", s, 0)
 SANS_B = lambda s: font("/System/Library/Fonts/Helvetica.ttc", s, 1)
 
+LOGO_PATH = Path(__file__).resolve().parent.parent / "client" / "public" / "cafe-nelo-wordmark.png"
+LOGO_WIDTH_RATIO = 0.34   # wordmark width relative to the QR edge
+LOGO_PAD_RATIO = 0.025    # quiet zone around the wordmark, relative to the QR edge
+
+
 def qr_image(size, fg, bg):
+    """QR at error-correction level H with the wordmark centred on a padded plate.
+
+    Level H tolerates ~30% damage; the plate covers well under 10% of the symbol
+    and stays clear of the finder patterns in the corners.
+    """
     q = qrcode.QRCode(error_correction=ERROR_CORRECT_H, box_size=10, border=0)
     q.add_data(URL); q.make(fit=True)
-    img = q.make_image(fill_color=fg, back_color=bg).convert("RGB")
-    return img.resize((size, size), Image.NEAREST)
+    img = q.make_image(fill_color=fg, back_color=bg).convert("RGBA")
+    img = img.resize((size, size), Image.NEAREST)
+
+    logo = Image.open(LOGO_PATH).convert("RGBA")
+    logo_w = int(size * LOGO_WIDTH_RATIO)
+    logo_h = int(logo_w * logo.height / logo.width)
+    logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
+    # Tint the wordmark to the module colour so it reads as part of the code.
+    tint = Image.new("RGBA", logo.size, fg + (255,))
+    tint.putalpha(logo.getchannel("A"))
+    pad = int(size * LOGO_PAD_RATIO)
+    plate_w, plate_h = logo_w + 2 * pad, logo_h + 2 * pad
+    px, py = (size - plate_w) // 2, (size - plate_h) // 2
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([px, py, px + plate_w, py + plate_h], radius=int(pad * 1.5), fill=bg + (255,))
+    img.alpha_composite(tint, (px + pad, py + pad))
+    return img.convert("RGB")
 
 def text_w(draw, text, f, tracking=0):
     w = sum(draw.textlength(ch, font=f) for ch in text) + tracking * (len(text) - 1)

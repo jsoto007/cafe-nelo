@@ -2,7 +2,8 @@
  * Canvas renderers for printable QR designs.
  *
  * Every design takes an already-rendered QR canvas (from qrcode.react's
- * QRCodeCanvas) and composes it into a print-ready layout at 300 dpi. The
+ * QRCodeCanvas), centres the Café Nelo wordmark on it, and composes it into a
+ * print-ready layout at 300 dpi. The
  * layouts mirror the PNG set delivered to the client so downloads from the
  * admin page match the originals.
  */
@@ -30,6 +31,23 @@ export const QR_DESIGNS = [
   { id: 'copper-accent', name: 'Copper Accent', size: '5 × 7 in', width: 1500, height: 2100 },
   { id: 'square-sticker', name: 'Square Sticker', size: '4 × 4 in', width: 1200, height: 1200 },
 ];
+
+const LOGO_SRC = '/cafe-nelo-wordmark.png';
+const LOGO_WIDTH_RATIO = 0.34; // wordmark width relative to the QR edge
+const LOGO_PAD_RATIO = 0.025; // quiet zone around the wordmark, relative to the QR edge
+
+let logoReady = null;
+export function ensureDesignLogo() {
+  if (!logoReady) {
+    logoReady = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null); // fall back to a plain QR if the asset is missing
+      img.src = LOGO_SRC;
+    });
+  }
+  return logoReady;
+}
 
 let fontsReady = null;
 export function ensureDesignFonts() {
@@ -100,7 +118,7 @@ function roundedRect(ctx, x, y, w, h, r, fill) {
 }
 
 /** Draw the QR onto the design with the requested module colour, at (x, y, size). */
-function drawQr(ctx, qrCanvas, x, y, size, fg, bg) {
+function drawQr(ctx, qrCanvas, x, y, size, fg, bg, logo) {
   // Re-tint: draw the source QR (dark modules on white) then map colours via
   // a temporary canvas so any design can use brand colours.
   const tmp = document.createElement('canvas');
@@ -124,6 +142,31 @@ function drawQr(ctx, qrCanvas, x, y, size, fg, bg) {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(tmp, x, y);
   ctx.imageSmoothingEnabled = true;
+
+  if (logo) {
+    // Level-H codes tolerate ~30% damage; the plate covers well under 10% and
+    // stays clear of the corner finder patterns.
+    const logoW = Math.round(size * LOGO_WIDTH_RATIO);
+    const logoH = Math.round((logoW * logo.naturalHeight) / logo.naturalWidth);
+    const pad = Math.round(size * LOGO_PAD_RATIO);
+    const plateW = logoW + pad * 2;
+    const plateH = logoH + pad * 2;
+    const px = x + Math.round((size - plateW) / 2);
+    const py = y + Math.round((size - plateH) / 2);
+    roundedRect(ctx, px, py, plateW, plateH, Math.round(pad * 1.5), bg);
+    // Tint the wordmark to the module colour.
+    const mark = document.createElement('canvas');
+    mark.width = logoW;
+    mark.height = logoH;
+    const mctx = mark.getContext('2d');
+    mctx.imageSmoothingEnabled = true;
+    mctx.imageSmoothingQuality = 'high';
+    mctx.drawImage(logo, 0, 0, logoW, logoH);
+    mctx.globalCompositeOperation = 'source-in';
+    mctx.fillStyle = fg;
+    mctx.fillRect(0, 0, logoW, logoH);
+    ctx.drawImage(mark, px + pad, py + pad);
+  }
 }
 
 function hexToRgb(hex) {
@@ -140,7 +183,7 @@ const DEFAULT_TEXT = {
 };
 
 const RENDERERS = {
-  'cream-classic': (ctx, qr, t) => {
+  'cream-classic': (ctx, qr, t, logo) => {
     const W = 1500;
     const H = 2100;
     const cx = W / 2;
@@ -151,13 +194,13 @@ const RENDERERS = {
     drawTracked(ctx, t.kicker, cx, 220, { font: SANS(34), fill: COLORS.muted, tracking: 6 });
     centered(ctx, t.heading, cx, 320, { font: SERIF_ITALIC(150), fill: COLORS.charcoal });
     rule(ctx, cx - 120, cx + 120, 540, COLORS.gold);
-    drawQr(ctx, qr, cx - 440, 640, 880, COLORS.charcoal, COLORS.cream);
+    drawQr(ctx, qr, cx - 440, 640, 880, COLORS.charcoal, COLORS.cream, logo);
     drawTracked(ctx, t.caption, cx, 1600, { font: SANS(38), fill: COLORS.charcoal, tracking: 8 });
     centered(ctx, t.url, cx, 1680, { font: SANS(34), fill: COLORS.muted });
     rule(ctx, cx - 120, cx + 120, 1820, COLORS.gold);
     drawTracked(ctx, t.footer, cx, 1880, { font: SANS(30), fill: COLORS.muted, tracking: 5 });
   },
-  'charcoal-gold': (ctx, qr, t) => {
+  'charcoal-gold': (ctx, qr, t, logo) => {
     const W = 1500;
     const H = 2100;
     const cx = W / 2;
@@ -171,25 +214,25 @@ const RENDERERS = {
     const px = cx - panel / 2;
     const py = 620;
     roundedRect(ctx, px, py, panel, panel, 40, COLORS.cream);
-    drawQr(ctx, qr, px + 50, py + 50, 860, COLORS.charcoal, COLORS.cream);
+    drawQr(ctx, qr, px + 50, py + 50, 860, COLORS.charcoal, COLORS.cream, logo);
     drawTracked(ctx, t.caption, cx, 1680, { font: SANS(38), fill: COLORS.gold, tracking: 8 });
     centered(ctx, t.url, cx, 1760, { font: SANS(34), fill: COLORS.goldSoft });
     drawTracked(ctx, 'BRONXVILLE, NY', cx, 1900, { font: SANS(30), fill: COLORS.gold, tracking: 6 });
   },
-  'minimal-white': (ctx, qr, t) => {
+  'minimal-white': (ctx, qr, t, logo) => {
     const W = 1200;
     const H = 1800;
     const cx = W / 2;
     ctx.fillStyle = COLORS.white;
     ctx.fillRect(0, 0, W, H);
     drawTracked(ctx, t.kicker, cx, 150, { font: SANS(30), fill: COLORS.muted, tracking: 6 });
-    drawQr(ctx, qr, cx - 410, 280, 820, COLORS.black, COLORS.white);
+    drawQr(ctx, qr, cx - 410, 280, 820, COLORS.black, COLORS.white, logo);
     centered(ctx, t.heading, cx, 1180, { font: SERIF(96), fill: COLORS.black });
     drawTracked(ctx, t.caption, cx, 1330, { font: SANS(30), fill: COLORS.muted, tracking: 6 });
     centered(ctx, t.url, cx, 1400, { font: SANS(30), fill: COLORS.muted });
     rule(ctx, cx - 60, cx + 60, 1560, COLORS.black, 2);
   },
-  'copper-accent': (ctx, qr, t) => {
+  'copper-accent': (ctx, qr, t, logo) => {
     const W = 1500;
     const H = 2100;
     const cx = W / 2;
@@ -205,13 +248,13 @@ const RENDERERS = {
     });
     drawTracked(ctx, 'FRESH  ·  SEASONAL  ·  DAILY', cx, 530, { font: SANS(32), fill: COLORS.copper, tracking: 8 });
     rule(ctx, 260, W - 260, 620, COLORS.copper);
-    drawQr(ctx, qr, cx - 440, 690, 880, COLORS.charcoal, COLORS.linen);
+    drawQr(ctx, qr, cx - 440, 690, 880, COLORS.charcoal, COLORS.linen, logo);
     rule(ctx, 260, W - 260, 1640, COLORS.copper);
     drawTracked(ctx, t.caption, cx, 1700, { font: SANS(32), fill: COLORS.charcoal, tracking: 5 });
     centered(ctx, t.url, cx, 1770, { font: SANS(32), fill: COLORS.muted });
     drawTracked(ctx, t.footer, cx, 1920, { font: SANS(28), fill: COLORS.muted, tracking: 5 });
   },
-  'square-sticker': (ctx, qr, t) => {
+  'square-sticker': (ctx, qr, t, logo) => {
     const W = 1200;
     const cx = W / 2;
     ctx.fillStyle = COLORS.cream;
@@ -222,7 +265,7 @@ const RENDERERS = {
     ctx.roundRect(40, 40, W - 80, W - 80, 60);
     ctx.stroke();
     drawTracked(ctx, t.kicker, cx, 120, { font: SANS(30), fill: COLORS.muted, tracking: 6 });
-    drawQr(ctx, qr, cx - 350, 220, 700, COLORS.charcoal, COLORS.cream);
+    drawQr(ctx, qr, cx - 350, 220, 700, COLORS.charcoal, COLORS.cream, logo);
     centered(ctx, t.heading, cx, 940, { font: SERIF_ITALIC(84), fill: COLORS.charcoal });
     drawTracked(ctx, t.caption === DEFAULT_TEXT.caption ? 'SCAN TO VIEW' : t.caption, cx, 1070, {
       font: SANS(28),
@@ -239,7 +282,7 @@ const RENDERERS = {
  * @param {object} text overrides for kicker/heading/caption/url/footer
  */
 export async function renderQrDesign(designId, qrCanvas, text = {}) {
-  await ensureDesignFonts();
+  const [, logo] = await Promise.all([ensureDesignFonts(), ensureDesignLogo()]);
   const design = QR_DESIGNS.find((d) => d.id === designId);
   if (!design) {
     throw new Error(`Unknown design: ${designId}`);
@@ -248,7 +291,7 @@ export async function renderQrDesign(designId, qrCanvas, text = {}) {
   canvas.width = design.width;
   canvas.height = design.height;
   const ctx = canvas.getContext('2d');
-  RENDERERS[designId](ctx, qrCanvas, { ...DEFAULT_TEXT, ...text });
+  RENDERERS[designId](ctx, qrCanvas, { ...DEFAULT_TEXT, ...text }, logo);
   return canvas;
 }
 
