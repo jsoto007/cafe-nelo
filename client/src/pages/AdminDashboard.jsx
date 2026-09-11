@@ -7,6 +7,7 @@ import AdminCalendar from './admin/AdminCalendar.jsx';
 import AdminGallery from './admin/AdminGallery.jsx';
 import AdminMenu from './admin/AdminMenu.jsx';
 import AdminSpecials from './admin/AdminSpecials.jsx';
+import AdminQrPromos from './admin/AdminQrPromos.jsx';
 import ReservationDetails from './admin/ReservationDetails.jsx';
 import AdminUserDetails from './admin/AdminUserDetails.jsx';
 import { AdminDashboardProvider, useAdminDashboard, getAdminResourcesForPath } from './admin/AdminDashboardContext.jsx';
@@ -80,6 +81,7 @@ function AdminDashboardContent() {
           <Route path="gallery" element={<AdminGallery />} />
           <Route path="menu" element={<AdminMenu />} />
           <Route path="specials" element={<AdminSpecials />} />
+          <Route path="qr-promos" element={<AdminQrPromos />} />
           <Route path="*" element={<Navigate to="calendar" replace />} />
         </Routes>
       </FadeIn>

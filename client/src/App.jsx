@@ -8,6 +8,7 @@ import MenuPage from './pages/MenuPage.jsx';
 import GalleryPage from './pages/GalleryPage.jsx';
 import PrivateEventsPage from './pages/PrivateEventsPage.jsx';
 import SpecialsPage from './pages/SpecialsPage.jsx';
+import PromoLanding from './pages/PromoLanding.jsx';
 
 function ResyRedirect() {
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/gallery" element={<GalleryPage />} />
         <Route path="/private-events" element={<PrivateEventsPage />} />
         <Route path="/specials" element={<SpecialsPage />} />
+        <Route path="/promo/:code" element={<PromoLanding />} />
 
         {/* /reservations: bounce to Resy */}
         <Route path="/reservations" element={<ResyRedirect />} />

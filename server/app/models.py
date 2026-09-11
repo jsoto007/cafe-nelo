@@ -685,3 +685,68 @@ class StudioAvailabilityBlock(TimestampMixin, db.Model):
     )
 
     created_by_admin = db.relationship("AdminAccount", back_populates="availability_blocks")
+
+
+class PromoCode(TimestampMixin, db.Model):
+    """An influencer promo code plus its aggregate tracking counters."""
+
+    __tablename__ = "promo_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(40), unique=True, nullable=False)
+    influencer_name = db.Column(db.String(160), nullable=False)
+    influencer_handle = db.Column(db.String(120))
+    platform = db.Column(db.String(60))
+    discount_label = db.Column(db.String(160), nullable=False)
+    notes = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    starts_at = db.Column(db.DateTime)
+    expires_at = db.Column(db.DateTime)
+    max_redemptions = db.Column(db.Integer)
+    visit_count = db.Column(db.Integer, nullable=False, default=0)
+    redemption_count = db.Column(db.Integer, nullable=False, default=0)
+    last_visit_at = db.Column(db.DateTime)
+    last_redemption_at = db.Column(db.DateTime)
+    created_by_admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("admin_accounts.id", ondelete="SET NULL"),
+    )
+
+    created_by_admin = db.relationship("AdminAccount")
+    events = db.relationship(
+        "PromoCodeEvent",
+        back_populates="promo_code",
+        cascade="all, delete-orphan",
+        order_by="desc(PromoCodeEvent.created_at)",
+    )
+
+    def __repr__(self) -> str:
+        return f"<PromoCode {self.code}>"
+
+
+class PromoCodeEvent(db.Model):
+    """One tracked interaction with a promo code: a link/QR visit or a redemption."""
+
+    __tablename__ = "promo_code_events"
+
+    EVENT_VISIT = "visit"
+    EVENT_REDEMPTION = "redemption"
+
+    id = db.Column(db.Integer, primary_key=True)
+    promo_code_id = db.Column(
+        db.Integer,
+        db.ForeignKey("promo_codes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_type = db.Column(db.String(20), nullable=False)
+    source = db.Column(db.String(40))
+    note = db.Column(db.String(255))
+    created_by_admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("admin_accounts.id", ondelete="SET NULL"),
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    promo_code = db.relationship("PromoCode", back_populates="events")
+    created_by_admin = db.relationship("AdminAccount")

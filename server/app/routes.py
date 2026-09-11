@@ -5,6 +5,7 @@ import hmac
 import json
 import math
 import mimetypes
+import re
 import secrets
 from html import escape
 from io import BytesIO
@@ -13,6 +14,7 @@ from functools import wraps
 from pathlib import Path
 from uuid import uuid4
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
@@ -69,6 +71,8 @@ from .models import (
     SessionOption,
     StoredUpload,
     PasswordResetRequest,
+    PromoCode,
+    PromoCodeEvent,
 )
 from .status_helpers import format_status_label
 
@@ -5635,3 +5639,342 @@ def admin_reorder_special_items(section_id):
     return jsonify({"status": "ok"})
 
     return jsonify({"status": "received"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Promo codes — influencer codes with visit/redemption tracking
+# ---------------------------------------------------------------------------
+
+PROMO_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I ambiguity
+PROMO_CODE_PATTERN = re.compile(r"^[A-Z0-9](?:[A-Z0-9-]{1,38}[A-Z0-9])?$")
+PROMO_PLATFORMS = {"instagram", "tiktok", "youtube", "facebook", "x", "other"}
+PROMO_VISIT_SOURCES = {"link", "qr", "manual"}
+RESTAURANT_TZ = ZoneInfo("America/New_York")
+
+
+def _promo_share_url(code: str) -> str:
+    base = (current_app.config.get("CLIENT_BASE_URL") or request.host_url or "").rstrip("/")
+    return f"{base}/promo/{code}"
+
+
+def _promo_status(promo: PromoCode, now: datetime | None = None) -> str:
+    now = now or datetime.utcnow()
+    if not promo.is_active:
+        return "inactive"
+    if promo.starts_at and now < promo.starts_at:
+        return "scheduled"
+    if promo.expires_at and now > promo.expires_at:
+        return "expired"
+    if promo.max_redemptions is not None and promo.redemption_count >= promo.max_redemptions:
+        return "exhausted"
+    return "active"
+
+
+def _utc_to_local_date(value: datetime | None) -> str | None:
+    if not value:
+        return None
+    return value.replace(tzinfo=timezone.utc).astimezone(RESTAURANT_TZ).date().isoformat()
+
+
+def _parse_promo_boundary(raw, *, end_of_day: bool):
+    """Parse a 'YYYY-MM-DD' (restaurant-local) or ISO datetime into naive UTC.
+
+    Returns (value, error). A blank input clears the field.
+    """
+    if raw is None or str(raw).strip() == "":
+        return None, None
+    text_value = str(raw).strip()
+    try:
+        if len(text_value) == 10:
+            day = date.fromisoformat(text_value)
+            local = datetime.combine(day, time(23, 59, 59) if end_of_day else time(0, 0, 0), tzinfo=RESTAURANT_TZ)
+            return local.astimezone(timezone.utc).replace(tzinfo=None), None
+        parsed = datetime.fromisoformat(text_value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=RESTAURANT_TZ)
+        return parsed.astimezone(timezone.utc).replace(tzinfo=None), None
+    except ValueError:
+        return None, "Use a date like 2026-12-31."
+
+
+def serialize_promo_event(event: PromoCodeEvent):
+    return {
+        "id": event.id,
+        "event_type": event.event_type,
+        "source": event.source,
+        "note": event.note,
+        "created_at": event.created_at.isoformat() if event.created_at else None,
+        "created_by": event.created_by_admin.name if event.created_by_admin else None,
+    }
+
+
+def serialize_promo_code(promo: PromoCode, *, include_events=False, event_limit=25):
+    data = {
+        "id": promo.id,
+        "code": promo.code,
+        "influencer_name": promo.influencer_name,
+        "influencer_handle": promo.influencer_handle,
+        "platform": promo.platform,
+        "discount_label": promo.discount_label,
+        "notes": promo.notes,
+        "is_active": promo.is_active,
+        "status": _promo_status(promo),
+        "starts_at": promo.starts_at.isoformat() if promo.starts_at else None,
+        "starts_on": _utc_to_local_date(promo.starts_at),
+        "expires_at": promo.expires_at.isoformat() if promo.expires_at else None,
+        "expires_on": _utc_to_local_date(promo.expires_at),
+        "max_redemptions": promo.max_redemptions,
+        "visit_count": promo.visit_count,
+        "redemption_count": promo.redemption_count,
+        "last_visit_at": promo.last_visit_at.isoformat() if promo.last_visit_at else None,
+        "last_redemption_at": promo.last_redemption_at.isoformat() if promo.last_redemption_at else None,
+        "share_url": _promo_share_url(promo.code),
+        "created_by": promo.created_by_admin.name if promo.created_by_admin else None,
+        "created_at": promo.created_at.isoformat() if promo.created_at else None,
+        "updated_at": promo.updated_at.isoformat() if promo.updated_at else None,
+    }
+    if include_events:
+        data["events"] = [serialize_promo_event(e) for e in promo.events[:event_limit]]
+    return data
+
+
+def _normalize_promo_code(raw) -> str:
+    return re.sub(r"\s+", "-", (raw or "").strip().upper())
+
+
+def _generate_promo_code(influencer_name: str) -> str:
+    prefix = "".join(ch for ch in (influencer_name or "").upper() if ch.isalnum())[:6] or "NELO"
+    for _ in range(25):
+        suffix = "".join(secrets.choice(PROMO_CODE_ALPHABET) for _ in range(4))
+        candidate = f"{prefix}-{suffix}"
+        if not PromoCode.query.filter_by(code=candidate).first():
+            return candidate
+    raise RuntimeError("Unable to generate a unique promo code.")
+
+
+def _apply_promo_fields(promo: PromoCode, payload: dict, *, creating: bool):
+    """Validate and copy editable fields from payload onto promo. Returns a list of errors."""
+    errors = []
+
+    if creating or "influencer_name" in payload:
+        name = (payload.get("influencer_name") or "").strip()
+        if not name:
+            errors.append("influencer_name is required.")
+        elif len(name) > 160:
+            errors.append("influencer_name is too long.")
+        else:
+            promo.influencer_name = name
+
+    if creating or "discount_label" in payload:
+        label = (payload.get("discount_label") or "").strip()
+        if not label:
+            errors.append("discount_label is required.")
+        elif len(label) > 160:
+            errors.append("discount_label is too long.")
+        else:
+            promo.discount_label = label
+
+    if "influencer_handle" in payload:
+        handle = (payload.get("influencer_handle") or "").strip().lstrip("@")
+        promo.influencer_handle = handle[:120] or None
+
+    if "platform" in payload:
+        platform = (payload.get("platform") or "").strip().lower()
+        if platform and platform not in PROMO_PLATFORMS:
+            errors.append("platform must be one of: " + ", ".join(sorted(PROMO_PLATFORMS)) + ".")
+        else:
+            promo.platform = platform or None
+
+    if "notes" in payload:
+        promo.notes = (payload.get("notes") or "").strip() or None
+
+    if "is_active" in payload:
+        promo.is_active = parse_bool(payload.get("is_active"), default=promo.is_active if not creating else True)
+
+    if "starts_at" in payload or "starts_on" in payload:
+        value, err = _parse_promo_boundary(payload.get("starts_on", payload.get("starts_at")), end_of_day=False)
+        if err:
+            errors.append(f"starts_on: {err}")
+        else:
+            promo.starts_at = value
+
+    if "expires_at" in payload or "expires_on" in payload:
+        value, err = _parse_promo_boundary(payload.get("expires_on", payload.get("expires_at")), end_of_day=True)
+        if err:
+            errors.append(f"expires_on: {err}")
+        else:
+            promo.expires_at = value
+
+    if "max_redemptions" in payload:
+        raw = payload.get("max_redemptions")
+        if raw in (None, ""):
+            promo.max_redemptions = None
+        else:
+            try:
+                limit = int(raw)
+                if limit < 1:
+                    raise ValueError
+                promo.max_redemptions = limit
+            except (TypeError, ValueError):
+                errors.append("max_redemptions must be a positive whole number.")
+
+    if promo.starts_at and promo.expires_at and promo.expires_at < promo.starts_at:
+        errors.append("expires_on must be after starts_on.")
+
+    return errors
+
+
+@api_bp.route("/api/admin/promo-codes", methods=["GET"])
+@admin_required
+def admin_list_promo_codes():
+    promos = PromoCode.query.order_by(PromoCode.created_at.desc(), PromoCode.id.desc()).all()
+    return jsonify([serialize_promo_code(p) for p in promos])
+
+
+@api_bp.route("/api/admin/promo-codes", methods=["POST"])
+@admin_required
+def admin_create_promo_code():
+    payload = request.get_json(silent=True) or {}
+    promo = PromoCode(is_active=True, visit_count=0, redemption_count=0)
+    errors = _apply_promo_fields(promo, payload, creating=True)
+
+    code = _normalize_promo_code(payload.get("code"))
+    if code:
+        if not PROMO_CODE_PATTERN.match(code):
+            errors.append("code may only contain letters, numbers and dashes (2-40 characters).")
+        elif PromoCode.query.filter_by(code=code).first():
+            errors.append(f"Code {code} already exists.")
+    if errors:
+        return jsonify({"error": errors[0], "errors": errors}), 400
+
+    promo.code = code or _generate_promo_code(promo.influencer_name)
+    promo.created_by_admin = g.current_admin
+    db.session.add(promo)
+    log_admin_activity(g.current_admin, "promo_code.created", f"{promo.code} for {promo.influencer_name}", request.remote_addr)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_promo_code(promo, include_events=True)), 201
+
+
+@api_bp.route("/api/admin/promo-codes/<int:promo_id>", methods=["GET"])
+@admin_required
+def admin_get_promo_code(promo_id):
+    promo = PromoCode.query.get(promo_id)
+    if not promo:
+        return jsonify({"error": "Promo code not found."}), 404
+    limit = request.args.get("event_limit", default=50, type=int)
+    return jsonify(serialize_promo_code(promo, include_events=True, event_limit=max(1, min(limit, 500))))
+
+
+@api_bp.route("/api/admin/promo-codes/<int:promo_id>", methods=["PATCH"])
+@admin_required
+def admin_update_promo_code(promo_id):
+    promo = PromoCode.query.get(promo_id)
+    if not promo:
+        return jsonify({"error": "Promo code not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    errors = _apply_promo_fields(promo, payload, creating=False)
+    if errors:
+        db.session.rollback()
+        return jsonify({"error": errors[0], "errors": errors}), 400
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_promo_code(promo, include_events=True))
+
+
+@api_bp.route("/api/admin/promo-codes/<int:promo_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_promo_code(promo_id):
+    promo = PromoCode.query.get(promo_id)
+    if not promo:
+        return jsonify({"error": "Promo code not found."}), 404
+    log_admin_activity(g.current_admin, "promo_code.deleted", f"{promo.code} for {promo.influencer_name}", request.remote_addr)
+    db.session.delete(promo)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return "", 204
+
+
+@api_bp.route("/api/admin/promo-codes/<int:promo_id>/redemptions", methods=["POST"])
+@admin_required
+def admin_log_promo_redemption(promo_id):
+    """Staff log a redemption when a guest shows the code in the restaurant."""
+    promo = PromoCode.query.get(promo_id)
+    if not promo:
+        return jsonify({"error": "Promo code not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    note = (payload.get("note") or "").strip()[:255] or None
+    now = datetime.utcnow()
+    promo.redemption_count = (promo.redemption_count or 0) + 1
+    promo.last_redemption_at = now
+    db.session.add(
+        PromoCodeEvent(
+            promo_code=promo,
+            event_type=PromoCodeEvent.EVENT_REDEMPTION,
+            source="manual",
+            note=note,
+            created_by_admin=g.current_admin,
+            created_at=now,
+        )
+    )
+    log_admin_activity(g.current_admin, "promo_code.redeemed", f"{promo.code}" + (f" — {note}" if note else ""), request.remote_addr)
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify(serialize_promo_code(promo, include_events=True)), 201
+
+
+@api_bp.route("/api/promo-codes/<string:code>", methods=["GET"])
+@limiter.limit("60 per minute")
+def public_lookup_promo_code(code):
+    """Public lookup used by the /promo/<code> landing page."""
+    promo = PromoCode.query.filter_by(code=_normalize_promo_code(code)).first()
+    if not promo:
+        return jsonify({"error": "Promo code not found."}), 404
+    status = _promo_status(promo)
+    return jsonify(
+        {
+            "code": promo.code,
+            "influencer_name": promo.influencer_name,
+            "influencer_handle": promo.influencer_handle,
+            "platform": promo.platform,
+            "discount_label": promo.discount_label,
+            "status": status,
+            "valid": status == "active",
+            "expires_on": _utc_to_local_date(promo.expires_at),
+        }
+    )
+
+
+@api_bp.route("/api/promo-codes/<string:code>/visits", methods=["POST"])
+@limiter.limit("30 per minute")
+def public_record_promo_visit(code):
+    """Count a link/QR visit. Counted even for inactive codes so reach is measurable."""
+    promo = PromoCode.query.filter_by(code=_normalize_promo_code(code)).first()
+    if not promo:
+        return jsonify({"error": "Promo code not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    source = (payload.get("source") or "link").strip().lower()
+    if source not in PROMO_VISIT_SOURCES:
+        source = "link"
+    now = datetime.utcnow()
+    promo.visit_count = (promo.visit_count or 0) + 1
+    promo.last_visit_at = now
+    db.session.add(PromoCodeEvent(promo_code=promo, event_type=PromoCodeEvent.EVENT_VISIT, source=source, created_at=now))
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({"error": "Database error."}), 500
+    return jsonify({"status": "recorded", "visit_count": promo.visit_count})

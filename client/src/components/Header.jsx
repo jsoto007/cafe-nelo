@@ -45,6 +45,7 @@ const ADMIN_NAV_ITEMS = [
   { label: 'Gallery', to: '/dashboard/admin/gallery' },
   { label: 'Menu', to: '/dashboard/admin/menu' },
   { label: 'Specials', to: '/dashboard/admin/specials' },
+  { label: 'QR & Promos', to: '/dashboard/admin/qr-promos' },
 ];
 
 export default function Header() {

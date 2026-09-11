@@ -16,4 +16,5 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'Gallery', to: '/dashboard/admin/gallery', type: 'link' },
   { label: 'Menu', to: '/dashboard/admin/menu', type: 'link' },
   { label: 'Specials', to: '/dashboard/admin/specials', type: 'link' },
+  { label: 'QR & Promos', to: '/dashboard/admin/qr-promos', type: 'link' },
 ];
