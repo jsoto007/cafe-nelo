@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
@@ -206,6 +207,40 @@ def create_app():
         db.create_all()
         stamp()
         click.echo("Schema created and stamped at head.")
+
+    @app.cli.command("seed-if-empty")
+    def seed_if_empty():
+        """Seed menu, specials and reservation options once, on a database with no menu.
+
+        Runs on every deploy but is a no-op after the first successful run (a
+        ``content_seed_applied`` system setting records it) and never touches a
+        database that already has menu categories, so admin-entered content is
+        never overwritten.
+        """
+        from .models import MenuCategory, SystemSetting
+
+        setting_key = "content_seed_applied"
+        if SystemSetting.query.filter_by(key=setting_key).first():
+            click.echo("Content seed already applied; skipping.")
+            return
+        if MenuCategory.query.count() > 0:
+            click.echo("Menu already has categories; skipping content seed.")
+            return
+
+        from .seed_content import seed_menu, seed_services
+
+        seed_menu()
+        seed_services()
+        db.session.add(
+            SystemSetting(
+                key=setting_key,
+                value=datetime.now(timezone.utc).isoformat(),
+                description="Timestamp of the one-time menu/specials/services content seed.",
+                is_editable=False,
+            )
+        )
+        db.session.commit()
+        click.echo("Content seed applied.")
 
     @app.cli.command("optimize-uploads")
     @click.option("--max-edge", default=1600, show_default=True, type=int, help="Maximum image edge (px) when optimizing.")

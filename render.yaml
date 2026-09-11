@@ -44,7 +44,9 @@ services:
     # db-bootstrap creates the schema on an empty database (the migration chain
     # cannot run from scratch) and applies pending migrations otherwise.
     # ensure-bootstrap-admin is a no-op when ADMIN_BOOTSTRAP_* are unset.
-    startCommand: cd server && flask --app wsgi db-bootstrap && flask --app wsgi ensure-bootstrap-admin && exec gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers ${WEB_CONCURRENCY:-2} --timeout 120
+    # seed-if-empty loads the menu/specials/services once and records it in
+    # system_settings, so later deploys never overwrite admin-entered content.
+    startCommand: cd server && flask --app wsgi db-bootstrap && flask --app wsgi ensure-bootstrap-admin && flask --app wsgi seed-if-empty && exec gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers ${WEB_CONCURRENCY:-2} --timeout 120
     # Returns 200 only when the database schema is reachable, so a broken boot
     # never replaces a healthy instance.
     healthCheckPath: /api/payments/health
